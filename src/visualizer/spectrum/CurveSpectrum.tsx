@@ -1,7 +1,5 @@
-import React, { useRef, useEffect } from 'react';
-import { ContainsCanvas } from './ContainsCanvas'
-
-import './AudioSpectrum.css'
+import React, { useEffect, useRef } from 'react';
+import { AudioSpectrumChildProps } from './AudioSpectrum';
 
 
 function getMagnitude(y0: number, ay: number, y1: number) : number {
@@ -31,19 +29,10 @@ function drawBezier(
 }
 
 
-interface AudioSpectrumProps extends ContainsCanvas {
-    arrayOnDisplay: number[];
-    fillStyle: string | CanvasGradient | CanvasPattern;
-    strokeStyle: string | CanvasGradient | CanvasPattern;
-    waveScale: number;
-    left: number;
-    bottom: number;
-    width: number;
-    zoom: number;
-}
+interface CurveSpectrumProps extends AudioSpectrumChildProps {}
 
 
-const AudioSpectrum : React.FC<AudioSpectrumProps> = (props) => {
+const CurveSpectrum : React.FC<CurveSpectrumProps> = (props) => {
 
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -59,8 +48,9 @@ const AudioSpectrum : React.FC<AudioSpectrumProps> = (props) => {
         const ctx = canvas.getContext('2d');
         if(!ctx) return;
 
-        ctx.strokeStyle = props.strokeStyle;
-        ctx.fillStyle = props.fillStyle;
+        ctx.strokeStyle = props.color.stroke;
+        ctx.fillStyle = props.color.fill;
+        ctx.lineWidth = props.color.lineWidth;
 
         const { arrayOnDisplay, waveScale = 1 } = props;
         const max = arrayOnDisplay.length / props.zoom;
@@ -83,8 +73,8 @@ const AudioSpectrum : React.FC<AudioSpectrumProps> = (props) => {
     }, [ props ]);
 
     return (
-        <canvas className="audio-spectrum" ref={canvasRef}></canvas>
+        <canvas className="curve-spectrum" ref={canvasRef}></canvas>
     );
 }
 
-export default AudioSpectrum;
+export default CurveSpectrum;

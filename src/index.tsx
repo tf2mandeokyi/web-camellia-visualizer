@@ -1,15 +1,23 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import reportWebVitals from './reportWebVitals';
-import CamelliaVisualzer from './visualzer/CamelliaVisualzer';
+import CamelliaVisualzer from './visualizer/CamelliaVisualzer';
 
 import './index.css';
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
     <React.StrictMode>
         <CamelliaVisualzer
-            fillStyle="blue"
-            strokeStyle="2px solid black"
+            defaultColor={{
+                fill: "blue",
+                stroke: "blue",
+                lineWidth: 1
+            }}
+            barSpectrum={{
+                fill: "red",
+                stroke: "red",
+                lineWidth: 2
+            }}
             framerate={60}
         />
     </React.StrictMode>

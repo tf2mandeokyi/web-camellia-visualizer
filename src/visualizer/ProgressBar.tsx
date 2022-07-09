@@ -1,10 +1,11 @@
 import React, { useEffect, useRef } from 'react'
-import { ContainsCanvas } from './ContainsCanvas'
+import { FillStrokeColor } from './FillStrokeColor'
 
 import "./ProgressBar.css"
 
 
-interface ProgressBarProps extends ContainsCanvas {
+interface ProgressBarProps {
+    color: FillStrokeColor
     left: number;
     y: number;
     width: number;
@@ -32,8 +33,9 @@ const ProgressBar : React.FC<ProgressBarProps> = (props) => {
         const ctx = canvas.getContext('2d');
         if(!ctx) return;
 
-        ctx.strokeStyle = props.strokeStyle;
-        ctx.fillStyle = props.fillStyle;
+        ctx.strokeStyle = props.color.stroke;
+        ctx.fillStyle = props.color.fill;
+        ctx.lineWidth = props.color.lineWidth;
 
         ctx.beginPath();
         ctx.moveTo(ballRadius, ballRadius-1);

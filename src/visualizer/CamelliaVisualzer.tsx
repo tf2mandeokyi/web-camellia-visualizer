@@ -1,8 +1,8 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { ContainsCanvas } from './ContainsCanvas'
-import AudioSpectrum from './AudioSpectrum';
+import { FillStrokeColor } from './FillStrokeColor'
+import AudioSpectrum from './spectrum/AudioSpectrum';
 import ProgressBar from './ProgressBar';
-import parseAudioBuffer from './parseAudioBuffer';
+import parseAudioBuffer from '../util/parseAudioBuffer';
 
 import './CamelliaVisualzer.css'
 
@@ -11,8 +11,22 @@ const audioContext = new AudioContext();
 const emptyArrayOnDisplay = [0, 0];
 
 
-interface CamelliaVisualzerProps extends ContainsCanvas {
+interface CamelliaVisualzerProps {
+    defaultColor: FillStrokeColor;
+    curveSpectrum?: Partial<FillStrokeColor>;
+    barSpectrum?: Partial<FillStrokeColor>;
+    progressBar?: Partial<FillStrokeColor>;
     framerate: number;
+}
+
+
+function mergeColor(color: Partial<FillStrokeColor> | undefined, defaultColor: FillStrokeColor) : FillStrokeColor {
+    if(color === undefined || color === null) return defaultColor; 
+    return {
+        fill: color.fill ?? defaultColor.fill,
+        stroke: color.stroke ?? defaultColor.stroke,
+        lineWidth: color.lineWidth ?? defaultColor.lineWidth
+    };
 }
 
 
@@ -34,7 +48,7 @@ const CamelliaVisualzer : React.FC<CamelliaVisualzerProps> = (props) => {
     const startButtonRef = useRef<HTMLInputElement>(null);
     const requestId = useRef<number>();
     
-    
+
     const loop = useCallback(() => {
         // =================
         if(play) {
@@ -123,8 +137,7 @@ const CamelliaVisualzer : React.FC<CamelliaVisualzerProps> = (props) => {
                 type="file" accept="audio/*" 
                 onInput={ onFileSelection }
             /><br/>
-            <div>{ processing ? "Processing..." : "" }</div><br/>
-            { frameNumber } / { parsedArray?.length ?? 0 }<br/>
+            { processing ? "Processing..." : "​" }<br/>
             <input
                 id="start_button" 
                 ref={ startButtonRef }
@@ -134,19 +147,18 @@ const CamelliaVisualzer : React.FC<CamelliaVisualzerProps> = (props) => {
             />
             <AudioSpectrum 
                 arrayOnDisplay={ arrayOnDisplay }
-                strokeStyle={ props.strokeStyle }
-                fillStyle={ props.fillStyle }
+                curveColor={ mergeColor(props.curveSpectrum, props.defaultColor) }
+                barColor={ mergeColor(props.barSpectrum, props.defaultColor) }
                 left={ windowSize.width / 2 - 44 }
-                width={777}
+                width={ 777 }
                 bottom={ windowSize.height / 2 + 175 }
-                zoom={27}
-                waveScale={3}
+                zoom={ 28 }
+                waveScale={ 4 }
             />
             <ProgressBar
-                strokeStyle={ props.strokeStyle }
-                fillStyle={ props.fillStyle }
+                color={ mergeColor(props.progressBar, props.defaultColor) }
                 left={ windowSize.width / 2 - 40 }
-                width={776}
+                width={ 776 }
                 y={ windowSize.height / 2 + 194 }
                 current={ frameNumber }
                 total={ parsedArray?.length ?? 0 }
