@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { FillStrokeColor } from './FillStrokeColor'
+import ImageTemplate from './ImageTemplate'
 import AudioSpectrum from './spectrum/AudioSpectrum';
 import ProgressBar from './ProgressBar';
 import parseAudioBuffer from '../util/parseAudioBuffer';
@@ -65,10 +66,9 @@ const CamelliaVisualzer : React.FC<CamelliaVisualzerProps> = (props) => {
                 var array = parsedArray?.[frameNumber];
                 if(!array) {
                     array = emptyArrayOnDisplay;
-                    setParsedArray(undefined);
                     setFrameNumber(0);
                     setPlay(false);
-                    if(playSound) playSound.buffer = null;
+                    setLoopStart(undefined);
                 }
                 else {
                     setFrameNumber(frameNumber + 1);
@@ -78,7 +78,7 @@ const CamelliaVisualzer : React.FC<CamelliaVisualzerProps> = (props) => {
         }
         // =================
         requestId.current = requestAnimationFrame(loop);
-    }, [ props, play, playSound, parsedArray, frameNumber, loopStart, nextLoopAt ])
+    }, [ props, play, parsedArray, frameNumber, loopStart, nextLoopAt ])
 
 
     const onFileSelection = useCallback(async () => {
@@ -106,7 +106,7 @@ const CamelliaVisualzer : React.FC<CamelliaVisualzerProps> = (props) => {
             const bufferSource = audioContext.createBufferSource();
             bufferSource.buffer = audioBuffer;
             bufferSource.connect(audioContext.destination);
-            bufferSource.start();
+            bufferSource.start(0);
 
             setPlaySound(bufferSource);
             setPlay(true);
@@ -144,6 +144,12 @@ const CamelliaVisualzer : React.FC<CamelliaVisualzerProps> = (props) => {
                 type="button" 
                 value="START"
                 onClick={ onClickStart }
+            />
+            <ImageTemplate
+                right={windowSize.width / 2 + 86}
+                bottom={windowSize.height / 2 - 197}
+                width={ 648 }
+                height={ 648 }
             />
             <AudioSpectrum 
                 arrayOnDisplay={ arrayOnDisplay }
