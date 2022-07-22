@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import { FillStrokeColor } from '../FillStrokeColor';
 import { AudioSpectrumChildProps } from './AudioSpectrum';
 
 
@@ -29,7 +30,7 @@ function drawBezier(
 }
 
 
-interface CurveSpectrumProps extends AudioSpectrumChildProps {}
+interface CurveSpectrumProps extends AudioSpectrumChildProps<FillStrokeColor> {}
 
 
 const CurveSpectrum : React.FC<CurveSpectrumProps> = (props) => {
@@ -56,7 +57,7 @@ const CurveSpectrum : React.FC<CurveSpectrumProps> = (props) => {
         const max = arrayOnDisplay.length / props.zoom;
         ctx.beginPath();
         ctx.moveTo(0, canvas.height - arrayOnDisplay[0] * waveScale);
-        for(var i = 0; i < max; ++i) {
+        for(let i = 0; i < max; ++i) {
             drawBezier(
                 ctx, 
                 (i-1) * canvas.width / (max - 1), canvas.width / (max - 1),
@@ -69,6 +70,7 @@ const CurveSpectrum : React.FC<CurveSpectrumProps> = (props) => {
         ctx.lineTo(canvas.width, canvas.height);
         ctx.lineTo(0, canvas.height);
         ctx.closePath();
+        ctx.stroke();
         ctx.fill();
     }, [ props ]);
 

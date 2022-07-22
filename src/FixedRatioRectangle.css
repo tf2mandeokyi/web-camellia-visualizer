@@ -1,0 +1,5 @@
+.fixedratio-rect {
+    position: absolute;
+    background-color: rgba(255, 0, 0, 0.5);
+    z-index: 999999;
+}

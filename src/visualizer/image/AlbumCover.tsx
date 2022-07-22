@@ -1,6 +1,6 @@
 import React from "react";
 
-import './ImageTemplate.css'
+import './AlbumCover.css'
 
 
 interface ImageTemplateProp {
@@ -8,22 +8,25 @@ interface ImageTemplateProp {
     bottom: number;
     width: number;
     height: number;
+    src?: string;
 }
 
-const ImageTemplate : React.FC<ImageTemplateProp> = (props) => {
-    return (
-        <image 
+const AlbumCover : React.FC<ImageTemplateProp> = (props) => {
+    return props.src ? (
+        <img 
             className="image-template" 
-            width={props.width} 
-            height={props.height}
+            width={ props.width } 
+            height={ props.height }
             style={{
                 right: props.right,
                 bottom: props.bottom,
                 width: props.width,
                 height: props.height
             }}
+            src={ props.src }
+            alt="album cover"
         />
-    );
+    ) : <></>;
 }
 
-export default ImageTemplate;
+export default AlbumCover;

@@ -11,10 +11,8 @@ interface ProgressBarProps {
     width: number;
     current: number;
     total: number;
+    ballRadius: number;
 }
-
-
-const ballRadius = 8;
 
 
 const ProgressBar : React.FC<ProgressBarProps> = (props) => {
@@ -23,6 +21,8 @@ const ProgressBar : React.FC<ProgressBarProps> = (props) => {
 
     useEffect(() => {
         if(!canvasRef.current) return;
+
+        let { ballRadius, color } = props;
 
         const canvas = canvasRef.current;
         canvas.style.left = (props.left - ballRadius) + 'px';
@@ -33,9 +33,9 @@ const ProgressBar : React.FC<ProgressBarProps> = (props) => {
         const ctx = canvas.getContext('2d');
         if(!ctx) return;
 
-        ctx.strokeStyle = props.color.stroke;
-        ctx.fillStyle = props.color.fill;
-        ctx.lineWidth = props.color.lineWidth;
+        ctx.strokeStyle = color.stroke;
+        ctx.fillStyle = color.fill;
+        ctx.lineWidth = color.lineWidth;
 
         ctx.beginPath();
         ctx.moveTo(ballRadius, ballRadius-1);
@@ -45,7 +45,7 @@ const ProgressBar : React.FC<ProgressBarProps> = (props) => {
         ctx.closePath();
         ctx.fill();
 
-        var x = props.width * props.current / props.total;
+        let x = props.width * props.current / props.total;
         ctx.beginPath();
         ctx.arc(
             ballRadius + (Number.isNaN(x) ? 0 : x), ballRadius, 

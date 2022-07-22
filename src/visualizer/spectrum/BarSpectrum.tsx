@@ -1,9 +1,12 @@
 import React, { useEffect, useRef } from "react";
 import { AudioSpectrumChildProps } from './AudioSpectrum'
+import { interpolate } from '../util/audioUtils';
+import { FillStrokeColor } from "../FillStrokeColor";
 
 
-interface CurveSpectrumProps extends AudioSpectrumChildProps {
+interface CurveSpectrumProps extends AudioSpectrumChildProps<Omit<FillStrokeColor, "fill">> {
     ballRadius: number;
+    ballCount: number;
 }
 
 
@@ -26,38 +29,35 @@ const BarSpectrum : React.FC<CurveSpectrumProps> = (props) => {
         if(!ctx) return;
 
         ctx.strokeStyle = props.color.stroke;
-        ctx.fillStyle = props.color.fill;
+        ctx.fillStyle = props.color.stroke;
         ctx.lineWidth = props.color.lineWidth;
 
         const { arrayOnDisplay, waveScale = 1 } = props;
         const max = Math.floor(arrayOnDisplay.length / props.zoom);
-        var i, x, k, ki, kd, y;
-
-        ctx.beginPath();
-        ctx.moveTo(ballRadius, props.bottom - arrayOnDisplay[0] * waveScale);
-        for(i = 1; i < 12; ++i) {
-            x = i * props.width / 11;
-            k = x * (max - 1) / props.width;
-            ki = Math.floor(k);
-            kd = k - ki;
-            y = arrayOnDisplay[ki] + kd * (arrayOnDisplay[ki+1] - arrayOnDisplay[ki]);
+        const ballArray = new Array(props.ballCount);
+        let i;
+        for(i = 0; i < props.ballCount; ++i) {
+            let x = i * props.width / (props.ballCount - 1);
+            let k = x * (max - 1) / props.width;
+            let ki = Math.floor(k);
+            let kd = k - ki;
+            let y = interpolate(arrayOnDisplay[ki], arrayOnDisplay[ki+1], kd);
             y = y ?? 0;
             y = Number.isNaN(y) ? 0 : y;
-            ctx.lineTo(x + ballRadius, props.bottom - y * waveScale);
+            ballArray[i] = y;
+        }
+
+        ctx.beginPath();
+        ctx.moveTo(ballRadius, props.bottom - ballArray[0] * waveScale);
+        for(i = 1; i < props.ballCount; ++i) {
+            ctx.lineTo(i * props.width / (props.ballCount - 1) + ballRadius, props.bottom - ballArray[i] * waveScale);
         }
         ctx.stroke();
         
-        for(i = 0; i < 12; ++i) {
-            x = i * props.width / 11;
-            k = x * (max - 1) / props.width;
-            ki = Math.floor(k);
-            kd = k - ki;
-            y = arrayOnDisplay[ki] + kd * (arrayOnDisplay[ki+1] - arrayOnDisplay[ki]);
-            y = y ?? 0;
-            y = Number.isNaN(y) ? 0 : y;
+        for(i = 0; i < props.ballCount; ++i) {
             ctx.beginPath();
             ctx.arc(
-                x + ballRadius, props.bottom - y * waveScale, 
+                i * props.width / (props.ballCount - 1) + ballRadius, props.bottom - ballArray[i] * waveScale, 
                 props.ballRadius, 0, 2 * Math.PI
             );
             ctx.closePath();

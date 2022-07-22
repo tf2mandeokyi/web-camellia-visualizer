@@ -6,9 +6,9 @@ import CurveSpectrum from './CurveSpectrum';
 import './AudioSpectrum.css'
 
 
-export interface AudioSpectrumChildProps {
+export interface AudioSpectrumChildProps<ColorType> {
     arrayOnDisplay: number[];
-    color: FillStrokeColor;
+    color: ColorType;
     waveScale: number;
     left: number;
     bottom: number;
@@ -20,7 +20,9 @@ export interface AudioSpectrumChildProps {
 interface AudioSpectrumProps {
     arrayOnDisplay: number[];
     curveColor: FillStrokeColor;
-    barColor: FillStrokeColor;
+    barColor: Omit<FillStrokeColor, "fill">;
+    ballCount: number;
+    ballRadius: number;
     waveScale: number;
     left: number;
     bottom: number;
@@ -31,20 +33,21 @@ interface AudioSpectrumProps {
 
 const AudioSpectrum : React.FC<AudioSpectrumProps> = (props) => {
 
-    const { curveColor, barColor, waveScale, zoom, ...others } = props;
+    const { curveColor, barColor, waveScale, zoom, ballCount, ballRadius, ...others } = props;
 
     return (<>
+        <BarSpectrum 
+            color={ barColor }
+            zoom={ zoom }
+            ballRadius={ props.ballRadius }
+            ballCount={ props.ballCount }
+            waveScale={ waveScale }
+            { ...others }
+        />
         <CurveSpectrum 
             color={ curveColor } 
             zoom={ zoom * 21 / 19 }
             waveScale={ waveScale * 3 / 5 } 
-            { ...others }
-        />
-        <BarSpectrum 
-            color={ barColor }
-            zoom={ zoom }
-            ballRadius={ 4 }
-            waveScale={ waveScale }
             { ...others }
         />
     </>)

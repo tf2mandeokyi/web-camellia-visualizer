@@ -1,6 +1,17 @@
 import FFT from 'fft.js';
 
-const parseAudioBuffer = function(buffer: AudioBuffer, framerate: number) : number[][] {
+
+/**
+ * Uses lerp (linear interpolation) for now.
+ * @todo Change function to cubic or whatever
+ * @param t between 0 and 1
+ */
+export function interpolate(y0: number, y1: number, t: number) {
+    return y0 + t * (y1 - y0);
+}
+
+
+export function parseAudioBuffer(buffer: AudioBuffer, framerate: number) : number[][] {
 
     const { numberOfChannels, sampleRate, length } = buffer;
     const sampleRatePerFrame = sampleRate / framerate;
@@ -15,13 +26,13 @@ const parseAudioBuffer = function(buffer: AudioBuffer, framerate: number) : numb
             .fill(0)
             .map((_, i) => {
                 const data = new Array(power);
-                var index, j;
+                let index, j;
                 for(j = 0; j < power; ++j) {
                     data[j] = 0;
                     index = i * sampleRatePerFrame + j;
-                    for(var channel of channels) {
+                    for(let channel of channels) {
                         if(index < length) {
-                            data[j] += channel[i * sampleRatePerFrame + j];
+                            data[j] += channel[index];
                         }
                     }
                     data[j] /= channels.length;
@@ -30,12 +41,10 @@ const parseAudioBuffer = function(buffer: AudioBuffer, framerate: number) : numb
                 fourierObject.realTransform(out, data);
                 const result = new Array(power / 2);
                 for(j = 0; j < power / 2; ++j) {
-                    var re = out[2 * j], im = out[2 * j + 1];
-                    var dist = Math.sqrt(re*re + im*im);
+                    let re = out[2 * j], im = out[2 * j + 1];
+                    let dist = Math.sqrt(re*re + im*im);
                     result[j] = dist;
                 }
                 return result;
             });
 }
-
-export default parseAudioBuffer;
