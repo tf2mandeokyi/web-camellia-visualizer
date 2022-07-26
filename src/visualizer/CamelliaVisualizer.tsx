@@ -2,9 +2,9 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { FillStrokeColor } from './FillStrokeColor'
 import { parseAudioBuffer } from './util/audioUtils';
 import Background from './image/Background'
-import AlbumCover from './image/AlbumCover'
+import AlbumCover, { AlbumCoverClickHandler } from './image/AlbumCover'
 import AudioSpectrum from './spectrum/AudioSpectrum';
-import ProgressBar from './ProgressBar';
+import ProgressBar, { ProgressBarClickHandler } from './ProgressBar';
 
 import './CamelliaVisualizer.css'
 
@@ -48,11 +48,10 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
 
 
     const [ windowSize, setWindowSize ] = useState<WidthHeight>({ width: window.innerWidth, height: window.innerHeight });
-    const [ contentHeight, setContentHeight ] = useState<number>(getContentHeight(
-        windowSize, { width: 3, height: 2 }
-    ));
+    const [ contentHeight, setContentHeight ] = useState<number>(
+        getContentHeight(windowSize, { width: 3, height: 2 })
+    );
     const [ audioBuffer, setAudioBuffer ] = useState<AudioBuffer>();
-    const [ playSound, setPlaySound ] = useState<AudioBufferSourceNode>();
     
     const [ processing, setProcessingState ] = useState<boolean>(false);
     const [ parsedArray, setParsedArray ] = useState<number[][]>();
@@ -62,55 +61,92 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
 
     const [ frameNumber, setFrameNumber ] = useState<number>(0);
     const [ play, setPlay ] = useState<boolean>(false);
-    const [ loopStart, setLoopStart ] = useState<number>();
-    const [ nextLoopAt, setNextLoopAt ] = useState<number>(0);
     
     const [ imageSrc, setImageSrc ] = useState<string>();
 
+
+    const playSoundRef = useRef<AudioBufferSourceNode>();
     const inputFileRef = useRef<HTMLInputElement>(null);
-    const requestId = useRef<number>();
+
+    const loopStartRef = useRef<number>();
+    const nextLoopAtRef = useRef<number>(0);
+    
+    const requestAnimationIdRef = useRef<number>();
+
+
+    const setFrame = (frame: number) => {
+        let playing = play;
+        stop();
+        playing ? start({ frame, forced: true }) : setFrameNumber(frame);
+    }
+
+
+    const start = (options: { frame?: number, forced?: boolean } = {}) => {
+        let { frame, forced } = options;
+
+        if(!processing && (forced ? true : !play) && audioBuffer && parsedArray) {
+            const bufferSource = audioContext.createBufferSource();
+            bufferSource.buffer = audioBuffer;
+            bufferSource.connect(audioContext.destination);
+
+            if(frame) {
+                bufferSource.start(0, frame / props.framerate);
+                setFrameNumber(frame);
+            }
+            else {
+                bufferSource.start(0, frameNumber / props.framerate);
+            }
+            playSoundRef.current = bufferSource;
+            setPlay(true);
+        }
+    }
+
+
+    const stop = useCallback((resetTimer: boolean = false) => {
+        if(!processing && audioBuffer && playSoundRef.current) {
+            playSoundRef.current.stop()
+            setPlay(false);
+            loopStartRef.current = undefined;
+
+            if(resetTimer) setFrameNumber(0);
+        }
+    }, [ audioBuffer, processing ]);
     
 
     const loop = useCallback(() => {
+        let next = nextLoopAtRef.current;
+        const now = new Date().getTime();
+        if (!loopStartRef.current) {
+            loopStartRef.current = now;
+            next = now + 1000 / props.framerate;
+            nextLoopAtRef.current = next;
+        }
         // =================
-        if(play) {
-            let next = nextLoopAt;
-            const now = new Date().getTime();
-            if (!loopStart) {
-                setLoopStart(now);
-                next = now + 1000 / props.framerate;
-                setNextLoopAt(next);
-            }
-            if(now >= next) {
-                let newFrameNumber = frameNumber;
-                do {
-                    next += 1000 / props.framerate;
-                    newFrameNumber++;
-                } while(now >= next);
+        if(now >= next) {
+            let newFrameNumber = frameNumber;
+            do {
+                next += 1000 / props.framerate;
+                if(play) newFrameNumber++;
+            } while(now >= next);
 
-                setNextLoopAt(next);
-                let array = parsedArray?.[newFrameNumber];
-                let mag = volumeArray?.[newFrameNumber];
-                if(!array) {
-                    array = emptyArrayOnDisplay;
-                    setFrameNumber(0);
-                    setPlay(false);
-                    setLoopStart(undefined);
-                }
-                else {
-                    setFrameNumber(newFrameNumber);
-                }
-                setArrayOnDisplay(array);
-                setVolumeOnDisplay(mag ?? 0);
+            nextLoopAtRef.current = next;
+            if(parsedArray && newFrameNumber >= parsedArray.length) {
+                stop(true);
+            }
+            else {
+                setFrameNumber(newFrameNumber);
             }
         }
-        else {
-            setArrayOnDisplay(emptyArrayOnDisplay);
-            setVolumeOnDisplay(0);
-        }
-        // =================
-        requestId.current = requestAnimationFrame(loop);
-    }, [ props, play, parsedArray, volumeArray, frameNumber, loopStart, nextLoopAt ])
+        requestAnimationIdRef.current = requestAnimationFrame(loop);
+    }, [ props, stop, play, parsedArray, frameNumber/*, loopStart, nextLoopAt*/ ])
+
+
+    const updateSpectrum = useCallback(() => {
+        let array = parsedArray?.[frameNumber];
+        let mag = volumeArray?.[frameNumber];
+        setArrayOnDisplay(array ?? emptyArrayOnDisplay);
+        setVolumeOnDisplay(mag ?? 0);
+    }, [ frameNumber, parsedArray, volumeArray ])
 
 
     const onFileSelection = useCallback(async () => {
@@ -143,31 +179,20 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
     }, [ props ]);
 
 
-    const onClickStart = () => {
-        if(!processing && !play && audioBuffer && parsedArray) {
-            const bufferSource = audioContext.createBufferSource();
-            bufferSource.buffer = audioBuffer;
-            bufferSource.connect(audioContext.destination);
-            bufferSource.start(0);
-
-            setPlaySound(bufferSource);
-            setPlay(true);
-        }
-    }
-
-
-    const onClickStop = () => {
-        if(!processing && play && audioBuffer && playSound) {
-            playSound.stop()
-            setFrameNumber(0);
-            setPlay(false);
-            setLoopStart(undefined);
-        }
-    }
-
-
     const onUrlUpdate : React.ChangeEventHandler<HTMLInputElement> = (event) => {
         setImageSrc(event.target.value);
+    }
+
+
+    const onProgressBarClick : ProgressBarClickHandler = (value) => {
+        if(audioBuffer && parsedArray) {
+            setFrame(Math.floor(value));
+        }
+    }
+
+
+    const onAlbumClick : AlbumCoverClickHandler = () => {
+        play ? stop() : start();
     }
 
 
@@ -190,9 +215,14 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
         loop();
         return () => {
             window.removeEventListener('resize', handleResize);
-            if(requestId.current) cancelAnimationFrame(requestId.current);
+            if(requestAnimationIdRef.current) cancelAnimationFrame(requestAnimationIdRef.current);
         }
     }, [ loop, handleResize ]);
+
+
+    useEffect(() => {
+        updateSpectrum();
+    }, [ updateSpectrum ]);
 
 
     return (<>
@@ -207,6 +237,7 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
                 width={ getRelative(648) }
                 height={ getRelative(648) }
                 src={ imageSrc }
+                onClick={ parsedArray ? onAlbumClick : undefined }
             />
             <AudioSpectrum 
                 arrayOnDisplay={ arrayOnDisplay }
@@ -228,8 +259,10 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
                 current={ frameNumber }
                 total={ parsedArray?.length ?? 0 }
                 ballRadius={ getRelative(8) }
+                onClick={ onProgressBarClick }
             />
-            <input 
+            <input
+                className="undraggable"
                 id="audio_input" 
                 ref={ inputFileRef } 
                 type="file" accept="audio/*" 
@@ -239,17 +272,12 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
             <input
                 id="start_button"
                 type="button" 
-                value="START"
-                onClick={ onClickStart }
-            />
-            <input
-                id="start_button"
-                type="button" 
                 value="STOP"
-                onClick={ onClickStop }
+                onClick={ () => stop(true) }
             />
             <input
-                id="start_button"
+                className="undraggable"
+                id="image_input"
                 type="text"
                 onChange={ onUrlUpdate }
                 placeholder="Image url..."
