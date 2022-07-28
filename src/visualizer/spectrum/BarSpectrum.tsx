@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import { AudioSpectrumChildProps } from './AudioSpectrum'
-import { interpolate } from '../util/audioUtils';
+import { interpolate } from '../../util/audioUtils';
 import { FillStrokeColor } from "../FillStrokeColor";
 
 

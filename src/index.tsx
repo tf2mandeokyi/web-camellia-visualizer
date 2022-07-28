@@ -8,7 +8,7 @@ import './index.css';
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
     <React.StrictMode>
-        <App framerate={60}/>
+        <App framerate={80}/> {/* Slightly higher than 60 fps, just in case of frame-jumping */}
     </React.StrictMode>
 );
 

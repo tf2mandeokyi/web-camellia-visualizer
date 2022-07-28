@@ -44,8 +44,9 @@ const AlbumCover : React.FC<AlbumCoverProp> = (props) => {
             }}
             onClick={ props.onClick }
         >
-            <span className="undraggable">Insert album by entering its image url!</span>
-            <span className="undraggable">(Click here to play/pause the inserted music)</span>
+            <span className="undraggable">Insert album by entering its image url,</span>
+            <span className="undraggable">​</span>
+            <span className="undraggable">And click me to play/pause the inserted music!</span>
         </div>
     );
 }
