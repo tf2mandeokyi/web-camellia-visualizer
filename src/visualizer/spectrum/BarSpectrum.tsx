@@ -1,12 +1,16 @@
 import React, { useEffect, useRef } from "react";
-import { AudioSpectrumChildProps } from './AudioSpectrum'
-import { interpolate } from '../../util/audioUtils';
+import { AudioSpectrumChildProps } from './AudioSpectrum';
 import { FillStrokeColor } from "../FillStrokeColor";
 
 
 interface CurveSpectrumProps extends AudioSpectrumChildProps<Omit<FillStrokeColor, "fill">> {
     ballRadius: number;
     ballCount: number;
+}
+
+
+function interpolate(y0: number, y1: number, t: number) {
+    return y0 + t * (y1 - y0);
 }
 
 

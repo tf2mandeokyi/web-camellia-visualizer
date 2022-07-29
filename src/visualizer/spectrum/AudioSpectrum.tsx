@@ -7,7 +7,7 @@ import './AudioSpectrum.css'
 
 
 export interface AudioSpectrumChildProps<ColorType> {
-    arrayOnDisplay: number[];
+    arrayOnDisplay: Float32Array;
     color: ColorType;
     waveScale: number;
     left: number;
@@ -18,7 +18,7 @@ export interface AudioSpectrumChildProps<ColorType> {
 
 
 interface AudioSpectrumProps {
-    arrayOnDisplay: number[];
+    arrayOnDisplay: Float32Array;
     curveColor: FillStrokeColor;
     barColor: Omit<FillStrokeColor, "fill">;
     ballCount: number;

@@ -1,16 +1,16 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { FillStrokeColor } from './FillStrokeColor';
-import FourierWorker from './workers/fourier.worker';
 import Background from './image/Background'
 import AudioSpectrum from './spectrum/AudioSpectrum';
 import AlbumCover, { AlbumCoverClickHandler } from './image/AlbumCover'
 import ProgressBar, { ProgressBarClickHandler } from './ProgressBar';
+import * as FourierWorker from './workers/fourier.worker';
 
 import './CamelliaVisualizer.css'
 
 
 const audioContext = new AudioContext();
-const emptyArrayOnDisplay = [0, 0];
+const emptyArrayOnDisplay = new Float32Array([0, 0]);
 
 
 interface WidthHeight {
@@ -52,12 +52,16 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
     );
     
     const [ processingText, setProcessingText ] = useState<string>("");
-    const [ parsedArray, setParsedArray ] = useState<number[][]>();
-    const [ arrayOnDisplay, setArrayOnDisplay ] = useState(emptyArrayOnDisplay);
-    const [ volumeArray, setVolumeArray ] = useState<number[]>();
+
+    const [ parsedArray, setParsedArray ] = useState<Float32Array[]>();
+    const [ arrayOnDisplay, setArrayOnDisplay ] = useState<Float32Array>(emptyArrayOnDisplay);
+    const processedParsedArray = useRef<Float32Array[]>();
+
+    const [ volumeArray, setVolumeArray ] = useState<Float32Array>();
     const [ volumeOnDisplay, setVolumeOnDisplay ] = useState<number>(0);
+    const processedVolumeArray = useRef<Float32Array>();
+
     const [ frameNumber, setFrameNumber ] = useState<number>(0);
-    
     const [ imageSrc, setImageSrc ] = useState<string>();
 
 
@@ -120,7 +124,7 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
         } else if(processRef.current === 0) {
             setProcessingText("Reading...");
         } else if(processRef.current > 0) {
-            setProcessingText(`Calculating: ${processRef.current}%`);
+            setProcessingText(`Calculating: ${Math.trunc(processRef.current * 100) / 100}%`);
         }
     }, []);
     
@@ -231,32 +235,57 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
 
 
     const handleCalculationWorkerMessage : FourierWorker.MessageHandlerFromOutside = useCallback(({ data }) => {
+        if(!calculationWorkerRef.current) return;
+
         switch(data.type) {
-            case 'progress':
-                let { current, total } = data;
-                processRef.current = 100 * current / total;
+            case 'start':
+                let { arraySize } = data;
+                processedParsedArray.current = new Array(arraySize).fill(emptyArrayOnDisplay);
+                processedVolumeArray.current = new Float32Array(arraySize);
                 break;
 
-            case 'result':
-                let { transformArray, volumeArray: volume } = data;
-                setParsedArray(transformArray);
-                setVolumeArray(volume);
-                stop(true);
-                processRef.current = -1;
+            case 'part':
+                if(processedParsedArray.current && processedVolumeArray.current) {
+                    let { index, fourierTransform, volume } = data;
+                    processedParsedArray.current[index] = fourierTransform;
+                    processedVolumeArray.current[index] = volume;
+                    processRef.current = 100 * index / processedParsedArray.current.length;
+                }
+                break;
+
+            case 'done':
+                if(processedParsedArray.current && processedVolumeArray.current) {
+                    processRef.current = -1;
+                    setParsedArray(processedParsedArray.current);
+                    setVolumeArray(processedVolumeArray.current);
+                    processedParsedArray.current = undefined;
+                    processedVolumeArray.current = undefined;
+
+                    stop(true);
+                    
+                    let oldWorker = calculationWorkerRef.current;
+                    setupWorker(true);
+                    oldWorker.terminate();
+                }
                 break;
         }
     }, [ stop ]);
+
+
+    const setupWorker = (forced: boolean = false) => {
+        if(forced || !calculationWorkerRef.current) {
+            let worker = FourierWorker.getWorker();
+            worker.onmessage = handleCalculationWorkerMessage;
+            calculationWorkerRef.current = worker;
+        }
+    }
 
 
     useEffect(() => {
         window.addEventListener('resize', handleResize);
         loop();
 
-        if(!calculationWorkerRef.current) {
-            let worker = FourierWorker.getWorker();
-            worker.onmessage = handleCalculationWorkerMessage;
-            calculationWorkerRef.current = worker;
-        }
+        setupWorker();
 
         return () => {
             window.removeEventListener('resize', handleResize);

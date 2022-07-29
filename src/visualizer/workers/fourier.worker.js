@@ -4,10 +4,11 @@ const FFT = require('fft.js')
 
 
 /**
- * @param { import('./fourier.worker').MessageToOutside } data 
+ * @param { import('./fourier.worker').MessageToOutside } data
+ * @param { Transferable[] | undefined } transfer
  */
-function postmessage(data) {
-    postMessage(data);
+function postmessage(data, transfer) {
+    postMessage(data, transfer);
 }
 
 
@@ -17,14 +18,14 @@ function postmessage(data) {
  * @param { number } startIndex 
  * @param { number } power 
  * @param { import('fft.js') } fourierObject 
- * @returns { fourierTransform: number[], volume: number } 
+ * @returns { fourierTransform: Float32Array, volume: number } 
  */
 function step(channels, startIndex, power, fourierObject) {
 
     /** @type { number[] } */
     const slicedBufferArray = new Array(power);
     /** @type { number[] } */
-    const fourierTransform = new Array(power / 2);
+    const fourierTransform = new Float32Array(power / 2);
     let min = +Infinity, max = -Infinity;
 
     for(let j = 0; j < power; ++j) {
@@ -70,23 +71,17 @@ onmessage = function(event) {
         const fourierObject = new FFT(power);
         const arraySize = Math.floor(frameCount);
 
-        /** @type { number[] } */
-        const volumeArray = new Array(arraySize);
-        /** @type { number[][] } */
-        const transformArray = new Array(arraySize);
-        
+        postmessage({ type: 'start', arraySize });
         for(let i = 0; i < arraySize; ++i) {
             let { fourierTransform, volume } = step(
                 channelsData,
                 Math.floor(i * sampleRatePerFrame),
                 power, fourierObject
             )
-            transformArray[i] = fourierTransform;
-            volumeArray[i] = volume;
-            postmessage({ type: 'progress', current: i+1, total: arraySize });
+            postmessage({ type: 'part', index: i, fourierTransform, volume });
         }
     
-        postmessage({ type: 'result', transformArray, volumeArray });
+        postmessage({ type: 'done' });
     }
 }
 

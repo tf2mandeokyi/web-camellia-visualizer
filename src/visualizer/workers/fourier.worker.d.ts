@@ -1,28 +1,30 @@
 declare type MessageWithType<T> = { type: T };
 
+declare type EmptyMessage = MessageWithType<'empty'>;
 declare type InputMessage = MessageWithType<'input'> & {
     channelsData: Float32Array[];
     sampleRate: number;
     dataArrayLength: number;
-    // bufferWrapper: Wrapper<AudioBuffer>;
     framerate: number;
     customSampleRate?: number;
 }
-declare type ResultMessage = MessageWithType<'result'> & {
-    transformArray: number[][];
-    volumeArray: number[];
+declare type StartedMessage = MessageWithType<'start'> & {
+    arraySize: number;
 }
-declare type ProgressMessage = MessageWithType<'progress'> & {
-    current: number;
-    total: number;
+declare type PartialResultMessage = MessageWithType<'part'> & {
+    index: number;
+    fourierTransform: Float32Array;
+    volume: number;
 }
+declare type DoneMessage = MessageWithType<'done'>;
 
 
-declare type MessageToWorker = InputMessage;
-declare type MessageToOutside = ResultMessage | ProgressMessage;
+declare type MessageToWorker = InputMessage | EmptyMessage;
+declare type MessageToOutside = StartedMessage | PartialResultMessage | DoneMessage | EmptyMessage;
 
 
-declare type MessageHandlerFromInside = (this: any, ev: MessageEvent<MessageToWorker>) => any
+declare type MessageHandlerFromInside = (this: DedicatedWorkerGlobalScope, ev: MessageEvent<MessageToWorker>) => any
+
 export type MessageHandlerFromOutside = (this: Worker, ev: MessageEvent<MessageToOutside>) => any
 
 export type CustomWorker = Omit<Worker, 'onmessage' | 'postMessage'> & {
