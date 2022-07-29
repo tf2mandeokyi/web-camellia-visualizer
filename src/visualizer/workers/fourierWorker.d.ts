@@ -27,10 +27,10 @@ declare type MessageHandlerFromInside = (this: DedicatedWorkerGlobalScope, ev: M
 
 export type MessageHandlerFromOutside = (this: Worker, ev: MessageEvent<MessageToOutside>) => any
 
-export type CustomWorker = Omit<Worker, 'onmessage' | 'postMessage'> & {
+export type CustomFourierWorker = Omit<Worker, 'onmessage' | 'postMessage'> & {
     onmessage: ((this: Worker, ev: MessageEvent<MessageToOutside>) => any) | null;
     postMessage(message: MessageToWorker, transfer: Transferable[]): void;
     postMessage(message: MessageToWorker, options?: PostMessageOptions): void;
 }
 
-export function getWorker() : CustomWorker;
+// export function getWorker() : CustomFourierWorker;

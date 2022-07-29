@@ -1,10 +1,10 @@
-/// <reference path="fourier.worker.d.ts"/>
+/// <reference path="fourierWorker.d.ts"/>
 
 const FFT = require('fft.js')
 
 
 /**
- * @param { import('./fourier.worker').MessageToOutside } data
+ * @param { import('./fourierWorker').MessageToOutside } data
  * @param { Transferable[] | undefined } transfer
  */
 function postmessage(data, transfer) {
@@ -57,7 +57,7 @@ function step(channels, startIndex, power, fourierObject) {
 }
 
 
-/** @type { import("./fourier.worker").MessageHandlerFromInside } */
+/** @type { import("./fourierWorker").MessageHandlerFromInside } */
 onmessage = function(event) {
     let message = event.data;
 
@@ -86,8 +86,6 @@ onmessage = function(event) {
 }
 
 
-module.exports = {
-    getWorker: function() {
-        return new Worker(new URL('./fourier.worker.js', import.meta.url));
-    }
-}
+// module.exports.getWorker = function() {
+//     return new Worker(new URL('./fourierWorker.js', import.meta.url));
+// }

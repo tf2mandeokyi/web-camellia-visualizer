@@ -4,7 +4,7 @@ import Background from './image/Background'
 import AudioSpectrum from './spectrum/AudioSpectrum';
 import AlbumCover, { AlbumCoverClickHandler } from './image/AlbumCover'
 import ProgressBar, { ProgressBarClickHandler } from './ProgressBar';
-import * as FourierWorker from './workers/fourier.worker';
+import * as FourierWorker from './workers/fourierWorker';
 
 import './CamelliaVisualizer.css'
 
@@ -65,7 +65,7 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
     const [ imageSrc, setImageSrc ] = useState<string>();
 
 
-    const calculationWorkerRef = useRef<FourierWorker.CustomWorker>();
+    const calculationWorkerRef = useRef<FourierWorker.CustomFourierWorker>();
     const audioBufferRef = useRef<AudioBuffer>();
     const playSoundRef = useRef<AudioBufferSourceNode>();
     const inputFileRef = useRef<HTMLInputElement>(null);
@@ -274,7 +274,7 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
 
     const setupWorker = (forced: boolean = false) => {
         if(forced || !calculationWorkerRef.current) {
-            let worker = FourierWorker.getWorker();
+            let worker = new Worker(new URL('./workers/fourierWorker.js', import.meta.url));
             worker.onmessage = handleCalculationWorkerMessage;
             calculationWorkerRef.current = worker;
         }
