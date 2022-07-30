@@ -36,16 +36,17 @@ const BarSpectrum : React.FC<CurveSpectrumProps> = (props) => {
         ctx.fillStyle = props.color.stroke;
         ctx.lineWidth = props.color.lineWidth;
 
-        const { arrayOnDisplay, waveScale = 1 } = props;
-        const max = Math.floor(arrayOnDisplay.length / props.zoom);
+        const { arrayOnDisplay, waveScale = 1, range } = props;
         const ballArray = new Array(props.ballCount);
-        let i;
+        let i, n = arrayOnDisplay.length, r = range[1] - range[0];
+
         for(i = 0; i < props.ballCount; ++i) {
             let x = i * props.width / (props.ballCount - 1);
-            let k = x * (max - 1) / props.width;
-            let ki = Math.floor(k);
-            let kd = k - ki;
-            let y = interpolate(arrayOnDisplay[ki], arrayOnDisplay[ki+1], kd);
+            let k = (n - 1) * (x * r / canvas.width + range[0]);
+
+            let k_int = Math.floor(k);
+            let k_dec = k - k_int;
+            let y = interpolate(arrayOnDisplay[k_int], arrayOnDisplay[k_int+1], k_dec);
             y = y ?? 0;
             y = Number.isNaN(y) ? 0 : y;
             ballArray[i] = y;

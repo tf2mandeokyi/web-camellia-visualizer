@@ -53,14 +53,16 @@ const CurveSpectrum : React.FC<CurveSpectrumProps> = (props) => {
         ctx.fillStyle = props.color.fill;
         ctx.lineWidth = props.color.lineWidth;
 
-        const { arrayOnDisplay, waveScale = 1 } = props;
-        const max = arrayOnDisplay.length / props.zoom;
+        const { arrayOnDisplay, waveScale = 1, range } = props;
+        const n = arrayOnDisplay.length, r = range[1] - range[0];
+        const wr = canvas.width / r, dx = wr / (n - 1);
+
         ctx.beginPath();
         ctx.moveTo(0, canvas.height - arrayOnDisplay[0] * waveScale);
-        for(let i = 0; i < max; ++i) {
+        for(let i = 0; i < n; ++i) {
             drawBezier(
-                ctx, 
-                (i-1) * canvas.width / (max - 1), canvas.width / (max - 1),
+                ctx,
+                (i-1) * dx - range[0] * wr, dx,
                 canvas.height - (arrayOnDisplay[i-1] ?? arrayOnDisplay[i  ]) * waveScale,
                 canvas.height -  arrayOnDisplay[i  ]                         * waveScale,
                 canvas.height -  arrayOnDisplay[i+1]                         * waveScale,
