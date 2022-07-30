@@ -13,23 +13,17 @@ function postmessage(data, transfer) {
 
 
 /**
- * 
  * @param { Float32Array[] } channels 
  * @param { number } startIndex 
  * @param { number } power 
- * @param { import('fft.js') } fourierObject 
- * @returns { fourierTransform: Float32Array, volume: number } 
+ * @returns { { combined: Float32Array, volume: number } }
  */
-function step(channels, startIndex, power, fourierObject) {
-
-    /** @type { number[] } */
-    const slicedBufferArray = new Array(power);
-    /** @type { number[] } */
-    const fourierTransform = new Float32Array(power / 2);
+function combineChannels(channels, startIndex, power) {
+    const combined = new Float32Array(power);
     let min = +Infinity, max = -Infinity;
 
     for(let j = 0; j < power; ++j) {
-        let temp = 0, index = Math.floor(startIndex + j);
+        let temp = 0, index = startIndex + j;
         
         for(let channel of channels) {
             if(index < channel.length) {
@@ -37,23 +31,54 @@ function step(channels, startIndex, power, fourierObject) {
             }
         }
         temp /= channels.length;
-        slicedBufferArray[j] = temp;
+        combined[j] = temp;
 
         if(min > temp) min = temp;
         if(max < temp) max = temp;
     }
-    const volume = power === 0 ? 0 : max - min;
 
-    const fourierArray = fourierObject.createComplexArray();
-    fourierObject.realTransform(fourierArray, slicedBufferArray);
+    return { combined, volume: max - min }
+}
 
-    for(let j = 0; j < power / 2; ++j) {
-        let re = fourierArray[2 * j], im = fourierArray[2 * j + 1];
-        let dist = Math.sqrt(re*re + im*im);
-        fourierTransform[j] = dist * 1024 / power;
+
+/**
+ * @param { any[] } input 
+ * @returns { Float32Array }
+ */
+function realifyComplexArray(input) {
+    let length = input.length / 2;
+    let result = new Float32Array(input.length / 2);
+
+    for(let j = 0; j < length; ++j) {
+        let re = input[2 * j], im = input[2 * j + 1];
+        result[j] = Math.sqrt(re*re + im*im) * 1024 / length;
     }
 
-    return { fourierTransform, volume };
+    return result;
+}
+
+
+/**
+ * 
+ * @param { Float32Array[] } channels 
+ * @param { number } startIndex 
+ * @param { number } power 
+ * @param { import('fft.js') } fourierObject 
+ * @returns { {
+ *     fourierTransform: Float32Array, 
+ *     volume: number 
+ * } }
+ */
+function step(channels, startIndex, power, fourierObject) {
+
+    let { combined: slicedBufferArray, volume } = combineChannels(channels, startIndex, power);
+
+    /** @type { number[] } */
+    const complexFourierArray = fourierObject.createComplexArray();
+    fourierObject.realTransform(complexFourierArray, slicedBufferArray);
+    const fourierArray = realifyComplexArray(complexFourierArray);
+
+    return { fourierTransform: fourierArray, volume };
 }
 
 
@@ -84,8 +109,3 @@ onmessage = function(event) {
         postmessage({ type: 'done' });
     }
 }
-
-
-// module.exports.getWorker = function() {
-//     return new Worker(new URL('./fourierWorker.js', import.meta.url));
-// }

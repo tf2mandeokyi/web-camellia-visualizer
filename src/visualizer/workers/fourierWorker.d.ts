@@ -1,6 +1,8 @@
 declare type MessageWithType<T> = { type: T };
 
 declare type EmptyMessage = MessageWithType<'empty'>;
+
+// Messages to worker
 declare type InputMessage = MessageWithType<'input'> & {
     channelsData: Float32Array[];
     sampleRate: number;
@@ -8,6 +10,8 @@ declare type InputMessage = MessageWithType<'input'> & {
     framerate: number;
     customSampleRate?: number;
 }
+
+// Messages to outside
 declare type StartedMessage = MessageWithType<'start'> & {
     arraySize: number;
 }
@@ -32,5 +36,3 @@ export type CustomFourierWorker = Omit<Worker, 'onmessage' | 'postMessage'> & {
     postMessage(message: MessageToWorker, transfer: Transferable[]): void;
     postMessage(message: MessageToWorker, options?: PostMessageOptions): void;
 }
-
-// export function getWorker() : CustomFourierWorker;

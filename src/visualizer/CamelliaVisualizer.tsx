@@ -198,7 +198,8 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
                     type: 'input',
                     dataArrayLength: length,
                     channelsData, sampleRate,
-                    framerate: props.framerate
+                    framerate: props.framerate,
+                    customSampleRate: 4096
                 })
             } else {
                 processRef.current = -1;
@@ -350,7 +351,7 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
                 width={ getRelative(648) }
                 height={ getRelative(648) }
                 src={ imageSrc }
-                onClick={ parsedArray ? onAlbumClick : undefined }
+                onClick={ parsedArray ? triggerStartStop : undefined }
             />
             <AudioSpectrum 
                 arrayOnDisplay={ arrayOnDisplay }
