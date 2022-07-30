@@ -199,7 +199,7 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
                     dataArrayLength: length,
                     channelsData, sampleRate,
                     framerate: props.framerate,
-                    customSampleRate: 4096
+                    customSampleRate: 2048
                 })
             } else {
                 processRef.current = -1;
