@@ -65,11 +65,14 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
     const [ imageSrc, setImageSrc ] = useState<string>();
 
 
-    const calculationWorkerRef = useRef<FourierWorker.CustomFourierWorker>();
-    const audioBufferRef = useRef<AudioBuffer>();
-    const playSoundRef = useRef<AudioBufferSourceNode>();
     const inputFileRef = useRef<HTMLInputElement>(null);
     const repeatCheckboxRef = useRef<HTMLInputElement>(null);
+    const imageSrcInputRef = useRef<HTMLInputElement>(null);
+
+    const audioBufferRef = useRef<AudioBuffer>();
+    const playSoundRef = useRef<AudioBufferSourceNode>();
+    
+    const calculationWorkerRef = useRef<FourierWorker.CustomFourierWorker>();
 
     const loopStartRef = useRef<number>();
     const nextLoopAtRef = useRef<number>(0);
@@ -174,7 +177,11 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
     const onFileSelection = useCallback(async () => {
         processRef.current = 0;
         try {
-            const buffer = await inputFileRef.current?.files?.[0]?.arrayBuffer();
+            // Audio buffer
+            const inputFile = inputFileRef.current?.files?.[0];
+            if(!inputFile)  { processRef.current = -1; return; }
+
+            const buffer = await inputFile.arrayBuffer();
             if(!buffer) { processRef.current = -1; return; }
 
             const decoded = await audioContext.decodeAudioData(buffer);
@@ -196,6 +203,23 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
             } else {
                 processRef.current = -1;
             }
+
+            // Album cover
+            window.jsmediatags.read(inputFile, {
+                onSuccess: ({ tags }) => {
+                    let { picture } = tags;
+                    if(!picture) return;
+
+                    let base64String = picture.data.map((c) => String.fromCharCode(c)).reduce((prev, cur) => prev + cur);
+                    let imageUri = "data:" + picture.format + ";base64," + window.btoa(base64String);
+
+                    if(imageSrcInputRef.current) imageSrcInputRef.current.value = imageUri;
+                    setImageSrc(imageUri);
+                },
+                onError: (error) => {
+                    console.error(':(', error.type, error.info)
+                }
+            })
         } catch(e) {
             console.error(e);
             processRef.current = -1;
@@ -356,6 +380,7 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
             />
             <input
                 className="undraggable"
+                ref={ imageSrcInputRef }
                 id="image_input"
                 type="text"
                 onChange={ onUrlUpdate }
