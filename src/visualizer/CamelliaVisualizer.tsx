@@ -362,7 +362,7 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
                 left={ windowSize.width / 2 - getRelative(44) }
                 width={ getRelative(777) }
                 bottom={ windowSize.height / 2 + getRelative(175) }
-                range={[ 0.002 / 2, 0.017 / 2 ]}
+                range={[ 0.0016 / 2, 0.016 / 2 ]}
                 waveScale={ getRelative(2.5) }
             />
             <ProgressBar
