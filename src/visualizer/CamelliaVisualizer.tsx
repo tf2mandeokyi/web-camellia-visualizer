@@ -239,9 +239,9 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
     }
 
 
-    const onAlbumClick : AlbumCoverClickHandler = () => {
+    const triggerStartStop : AlbumCoverClickHandler = useCallback(() => {
         playRef.current ? stop() : start();
-    }
+    }, [ start, stop ]);
 
 
     const getRelative = (absolute1080Number: number) => {
@@ -256,6 +256,13 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
         
         setWindowSize(widthHeight);
     }, []);
+
+
+    const handleKeyPress = useCallback((event: KeyboardEvent) => {
+        if(event.key === ' ') {
+            triggerStartStop();
+        }
+    }, [ triggerStartStop ]);
 
 
     const handleCalculationWorkerMessage : FourierWorker.MessageHandlerFromOutside = useCallback(({ data }) => {
@@ -286,36 +293,44 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
                     processedVolumeArray.current = undefined;
 
                     stop(true);
-                    
-                    let oldWorker = calculationWorkerRef.current;
-                    setupWorker(true);
-                    oldWorker.terminate();
+                    resetWorker();
                 }
                 break;
         }
     }, [ stop ]);
 
 
-    const setupWorker = (forced: boolean = false) => {
+    const setupWorker = useCallback((forced: boolean = false) => {
         if(forced || !calculationWorkerRef.current) {
             let worker = new Worker(new URL('./workers/fourierWorker.js', import.meta.url));
             worker.onmessage = handleCalculationWorkerMessage;
             calculationWorkerRef.current = worker;
         }
-    }
+    }, [ handleCalculationWorkerMessage ]);
+
+
+    const resetWorker = useCallback(() => {
+        if(!calculationWorkerRef.current) return;
+        
+        let oldWorker = calculationWorkerRef.current;
+        setupWorker(true);
+        oldWorker.terminate();
+    }, [ setupWorker ]);
 
 
     useEffect(() => {
         window.addEventListener('resize', handleResize);
-        loop();
+        window.addEventListener('keypress', handleKeyPress);
 
+        loop();
         setupWorker();
 
         return () => {
             window.removeEventListener('resize', handleResize);
+            window.removeEventListener('keypress', handleKeyPress);
             if(requestAnimationIdRef.current) cancelAnimationFrame(requestAnimationIdRef.current);
         }
-    }, [ handleCalculationWorkerMessage, loop, handleResize ]);
+    }, [ handleCalculationWorkerMessage, handleKeyPress, setupWorker, loop, handleResize ]);
 
 
     useEffect(() => {
