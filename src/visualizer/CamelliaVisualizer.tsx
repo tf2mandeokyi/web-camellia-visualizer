@@ -216,9 +216,6 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
 
                     if(imageSrcInputRef.current) imageSrcInputRef.current.value = imageUri;
                     setImageSrc(imageUri);
-                },
-                onError: (error) => {
-                    console.error(':(', error.type, error.info)
                 }
             })
         } catch(e) {

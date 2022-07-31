@@ -30,7 +30,35 @@ function drawBezier(
 }
 
 
-interface CurveSpectrumProps extends AudioSpectrumChildProps<FillStrokeColor> {}
+function drawBellCurve(
+    context: CanvasRenderingContext2D,
+    canvasHeight: number,
+    x: number, width: number, height: number
+) : void {
+    context.beginPath();
+    context.moveTo(x - width / 2, canvasHeight);
+    // Left side
+    context.bezierCurveTo(
+        x - width / 4, canvasHeight - height / 2,
+        x - width / 6, canvasHeight - height,
+        x, canvasHeight - height
+    );
+    // Right side
+    context.bezierCurveTo(
+        x + width / 6, canvasHeight - height,
+        x + width / 4, canvasHeight - height / 2,
+        x + width / 2, canvasHeight
+    );
+    context.lineTo(x - width / 2, canvasHeight);
+    context.closePath();
+    context.stroke();
+    context.fill();
+}
+
+
+interface CurveSpectrumProps extends AudioSpectrumChildProps<FillStrokeColor> {
+    mode: 'continuous' | 'bells';
+}
 
 
 const CurveSpectrum : React.FC<CurveSpectrumProps> = (props) => {
@@ -49,31 +77,52 @@ const CurveSpectrum : React.FC<CurveSpectrumProps> = (props) => {
         const ctx = canvas.getContext('2d');
         if(!ctx) return;
 
-        ctx.strokeStyle = props.color.stroke;
-        ctx.fillStyle = props.color.fill;
-        ctx.lineWidth = props.color.lineWidth;
+        ctx.fillStyle = 'white';
 
         const { arrayOnDisplay, waveScale = 1, range } = props;
         const n = arrayOnDisplay.length, r = range[1] - range[0];
         const wr = canvas.width / r, dx = wr / (n - 1);
 
-        ctx.beginPath();
-        ctx.moveTo(0, canvas.height - arrayOnDisplay[0] * waveScale);
-        for(let i = 0; i < n; ++i) {
-            drawBezier(
-                ctx,
-                (i-1) * dx - range[0] * wr, dx,
-                canvas.height - (arrayOnDisplay[i-1] ?? arrayOnDisplay[i  ]) * waveScale,
-                canvas.height -  arrayOnDisplay[i  ]                         * waveScale,
-                canvas.height -  arrayOnDisplay[i+1]                         * waveScale,
-                canvas.height - (arrayOnDisplay[i+2] ?? arrayOnDisplay[i+1]) * waveScale,
-            );
+        const start = Math.floor((n - 1) * range[0]) - 1;
+        const end = Math.floor((n - 1) * (r + range[0])) + 1;
+
+        if(props.mode === 'continuous') {
+
+            ctx.beginPath();
+            ctx.moveTo(0, canvas.height - arrayOnDisplay[0] * waveScale);
+            for(let i = start; i <= end; ++i) {
+                drawBezier(
+                    ctx,
+                    (i-1) * dx - range[0] * wr, dx,
+                    canvas.height - (arrayOnDisplay[i-1] ?? arrayOnDisplay[i  ]) * waveScale,
+                    canvas.height -  arrayOnDisplay[i  ]                         * waveScale,
+                    canvas.height -  arrayOnDisplay[i+1]                         * waveScale,
+                    canvas.height - (arrayOnDisplay[i+2] ?? arrayOnDisplay[i+1]) * waveScale,
+                );
+            }
+            ctx.lineTo(canvas.width, canvas.height);
+            ctx.lineTo(0, canvas.height);
+            ctx.closePath();
+            ctx.stroke();
+            ctx.fill();
         }
-        ctx.lineTo(canvas.width, canvas.height);
-        ctx.lineTo(0, canvas.height);
-        ctx.closePath();
-        ctx.stroke();
-        ctx.fill();
+        else if(props.mode === 'bells') {
+            for(let i = start; i <= end; ++i) {
+                drawBellCurve(
+                    ctx, canvas.height,
+                    i * dx - range[0] * wr, 
+                    canvas.width / 5,
+                    arrayOnDisplay[i] * waveScale
+                );
+            }
+        }
+        
+        ctx.globalCompositeOperation = 'source-in';
+        
+        ctx.strokeStyle = props.color.stroke;
+        ctx.lineWidth = props.color.lineWidth;
+        ctx.fillStyle = props.color.fill;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
     }, [ props ]);
 
     return (

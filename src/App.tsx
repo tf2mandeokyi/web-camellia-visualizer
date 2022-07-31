@@ -10,8 +10,11 @@ const App : React.FC<AppProps> = (props) => {
         <CamelliaVisualizer
             defaultColor={{
                 fill: "white",
-                stroke: "black",
+                stroke: "white",
                 lineWidth: 2
+            }}
+            curveSpectrum={{
+                stroke: "transparent"
             }}
             // barSpectrum={{
             //     fill: "#ff00aa",

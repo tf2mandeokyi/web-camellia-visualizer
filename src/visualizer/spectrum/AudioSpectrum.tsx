@@ -47,6 +47,7 @@ const AudioSpectrum : React.FC<AudioSpectrumProps> = (props) => {
         <CurveSpectrum 
             color={ curveColor } 
             range={ range }
+            mode="continuous"
             waveScale={ waveScale * 3 / 5 } 
             { ...others }
         />
