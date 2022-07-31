@@ -340,7 +340,7 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
         <div className="camellia-visualzer">
             <Background
                 src={ imageSrc }
-                magnify={ Math.min(1 + 0.04 * volumeOnDisplay * volumeOnDisplay, 10) }
+                magnify={ Math.min(1 + 0.04 * volumeOnDisplay * volumeOnDisplay, 10) + 0.05 }
             />
             <AlbumCover
                 right={ windowSize.width / 2 + getRelative(86) }

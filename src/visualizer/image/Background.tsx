@@ -35,6 +35,7 @@ const Background : React.FC<BackgroundProps> = (props) => {
                     }}
                 /> : <></>
             }
+            <div className="background-pattern"></div>
         </div>
     )
 }
