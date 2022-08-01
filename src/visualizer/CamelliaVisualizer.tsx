@@ -199,7 +199,8 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
                     dataArrayLength: length,
                     channelsData, sampleRate,
                     framerate: props.framerate,
-                    customSampleRate: 2048
+                    transformZoom: 4, // Change this property's name
+                    customSampleRate: 1024
                 })
             } else {
                 processRef.current = -1;
@@ -360,7 +361,7 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
                 width={ getRelative(777) }
                 bottom={ windowSize.height / 2 + getRelative(175) }
                 range={[ 0.0016 / 2, 0.016 / 2 ]}
-                waveScale={ getRelative(2.5) }
+                waveScale={ getRelative(2) }
             />
             <ProgressBar
                 color={ mergeColor(props.progressBar, props.defaultColor) }

@@ -1,6 +1,6 @@
 /// <reference path="fourierWorker.d.ts"/>
 
-const FFT = require('fft.js')
+const { FastRealFourierTransform } = require('../../fft/index.ts');
 
 
 /**
@@ -63,7 +63,7 @@ function realifyComplexArray(input) {
  * @param { Float32Array[] } channels 
  * @param { number } startIndex 
  * @param { number } power 
- * @param { import('fft.js') } fourierObject 
+ * @param { import('../../fft').FastRealFourierTransform } fourierObject 
  * @returns { {
  *     fourierTransform: Float32Array, 
  *     volume: number 
@@ -73,10 +73,8 @@ function step(channels, startIndex, power, fourierObject) {
 
     let { combined: slicedBufferArray, volume } = combineChannels(channels, startIndex, power);
 
-    /** @type { number[] } */
-    const complexFourierArray = fourierObject.createComplexArray();
-    fourierObject.realTransform(complexFourierArray, slicedBufferArray);
-    const fourierArray = realifyComplexArray(complexFourierArray);
+    const fourierArray = fourierObject.realTransform(slicedBufferArray, 'radix-4')
+        .map(e => e * 1024 / fourierObject.getSampleRate());
 
     return { fourierTransform: fourierArray, volume };
 }
@@ -87,13 +85,13 @@ onmessage = function(event) {
     let message = event.data;
 
     if(message.type === 'input') {
-        let { channelsData, sampleRate, dataArrayLength, framerate, customSampleRate } = message;
+        let { channelsData, transformZoom, sampleRate, dataArrayLength, framerate, customSampleRate } = message;
 
         const sampleRatePerFrame = sampleRate / framerate;
         const frameCount = dataArrayLength / sampleRatePerFrame;
     
         const power = customSampleRate ?? Math.pow(2, Math.floor(Math.log(sampleRatePerFrame) / Math.log(2)));
-        const fourierObject = new FFT(power);
+        const fourierObject = new FastRealFourierTransform(power, transformZoom);
         const arraySize = Math.floor(frameCount);
 
         postmessage({ type: 'start', arraySize });
