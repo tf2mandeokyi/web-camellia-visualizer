@@ -12,6 +12,17 @@ function postmessage(data, transfer) {
 }
 
 
+const DEFAULT_BMHARRIS = [ 0.35875, 0.48829, 0.14128, 0.01168 ];
+/**
+ * @param { number } N 
+ * @param { number } n
+ */
+function blackmanHarris4(N, n, [ a0, a1, a2, a3 ] = DEFAULT_BMHARRIS) {
+    let w = 2 * Math.PI * n / (N-1);
+    return a0 - a1*Math.cos(w) + a2*Math.cos(2*w) - a3*Math.cos(3*w);
+}
+
+
 /**
  * @param { Float32Array[] } channels 
  * @param { number } startIndex 
@@ -23,7 +34,7 @@ function combineChannels(channels, startIndex, length) {
     let min = +Infinity, max = -Infinity;
 
     for(let j = 0; j < length; ++j) {
-        let temp = 0, index = startIndex + j, hanning;
+        let temp = 0, index = startIndex + j;
         
         for(let channel of channels) {
             if(index < channel.length) {
@@ -31,9 +42,7 @@ function combineChannels(channels, startIndex, length) {
             }
         }
         temp /= channels.length;
-
-        hanning = Math.pow(Math.sin(Math.PI * j / length), 2)
-        combined[j] = temp * hanning;
+        combined[j] = temp * blackmanHarris4(length, j);
 
         if(min > temp) min = temp;
         if(max < temp) max = temp;
