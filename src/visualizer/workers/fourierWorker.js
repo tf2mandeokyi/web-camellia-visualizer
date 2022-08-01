@@ -15,15 +15,15 @@ function postmessage(data, transfer) {
 /**
  * @param { Float32Array[] } channels 
  * @param { number } startIndex 
- * @param { number } power 
+ * @param { number } length 
  * @returns { { combined: Float32Array, volume: number } }
  */
-function combineChannels(channels, startIndex, power) {
-    const combined = new Float32Array(power);
+function combineChannels(channels, startIndex, length) {
+    const combined = new Float32Array(length);
     let min = +Infinity, max = -Infinity;
 
-    for(let j = 0; j < power; ++j) {
-        let temp = 0, index = startIndex + j;
+    for(let j = 0; j < length; ++j) {
+        let temp = 0, index = startIndex + j, hanning;
         
         for(let channel of channels) {
             if(index < channel.length) {
@@ -31,30 +31,15 @@ function combineChannels(channels, startIndex, power) {
             }
         }
         temp /= channels.length;
-        combined[j] = temp;
+
+        hanning = Math.pow(Math.sin(Math.PI * j / length), 2)
+        combined[j] = temp * hanning;
 
         if(min > temp) min = temp;
         if(max < temp) max = temp;
     }
 
     return { combined, volume: max - min }
-}
-
-
-/**
- * @param { any[] } input 
- * @returns { Float32Array }
- */
-function realifyComplexArray(input) {
-    let length = input.length / 2;
-    let result = new Float32Array(input.length / 2);
-
-    for(let j = 0; j < length; ++j) {
-        let re = input[2 * j], im = input[2 * j + 1];
-        result[j] = Math.sqrt(re*re + im*im) * 1024 / length;
-    }
-
-    return result;
 }
 
 
@@ -73,8 +58,7 @@ function step(channels, startIndex, power, fourierObject) {
 
     let { combined: slicedBufferArray, volume } = combineChannels(channels, startIndex, power);
 
-    const fourierArray = fourierObject.realTransform(slicedBufferArray, 'radix-4')
-        .map(e => e * 1024 / fourierObject.getSampleRate());
+    const fourierArray = fourierObject.realTransform(slicedBufferArray, 'radix-4');
 
     return { fourierTransform: fourierArray, volume };
 }
