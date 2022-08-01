@@ -8,6 +8,7 @@ declare type InputMessage = MessageWithType<'input'> & {
     sampleRate: number;
     dataArrayLength: number;
     framerate: number;
+    transformZoom: number;
     customSampleRate?: number;
 }
 
