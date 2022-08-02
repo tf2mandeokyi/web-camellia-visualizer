@@ -81,8 +81,11 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
         if(processRef.current !== -1) return;
 
         let player = playerRef.current;
-        if(!player?.isAudioInserted() || !parsedArray) return;
-        if(forced ? true : !player.isPlaying()) player.start(seconds);
+        if(!player?.isAudioInserted()) return;
+        
+        if(forced ? true : !player.isPlaying()) {
+            player.start(seconds);
+        }
     }, [ parsedArray ]);
 
 
@@ -114,18 +117,8 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
 
     const loop = useCallback(() => {
         updateProcessString();
-
-        let time = (playerRef.current?.getTime() ?? 0) / 1000;
-        let frame = Math.floor(time * props.framerate)
-        if(parsedArray && frame >= parsedArray.length) {
-            stop(true);
-            if(repeatCheckboxRef.current?.checked) {
-                start({ forced: true });
-            }
-        }
-
         updateSpectrum();
-    }, [ props, start, stop, updateProcessString, updateSpectrum, parsedArray ])
+    }, [ updateProcessString, updateSpectrum ])
 
 
     const onFileSelection = useCallback(async () => {
@@ -167,9 +160,9 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
     }
 
 
-    const onProgressBarClick : ProgressBarClickHandler = (value) => {
+    const onProgressBarUpdate : ProgressBarClickHandler = (value) => {
         if(playerRef.current?.isAudioInserted() && parsedArray) {
-            playerRef.current.setTime(Math.floor(value), true);
+            playerRef.current.setTime(value, true);
         }
     }
 
@@ -259,7 +252,13 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
         window.addEventListener('keypress', handleKeyPress);
 
         if(!playerRef.current) {
-            playerRef.current = new AudioPlayer();
+            playerRef.current = new AudioPlayer()
+                .setDonePlayingHandler(() => {
+                    if(repeatCheckboxRef.current?.checked) {
+                        start({ seconds: 0, forced: true });
+                    }
+                });
+
         }
         setupWorker();
 
@@ -267,7 +266,7 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
             window.removeEventListener('resize', handleResize);
             window.removeEventListener('keypress', handleKeyPress);
         }
-    }, [ handleCalculationWorkerMessage, handleKeyPress, setupWorker, loop, handleResize ]);
+    }, [ handleCalculationWorkerMessage, handleKeyPress, setupWorker, start, loop, handleResize ]);
 
 
     useEffect(() => {
@@ -313,7 +312,7 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
                 current={ playerRef.current?.getTime() ?? 0 }
                 total={ (parsedArray?.length ?? 0) / props.framerate }
                 ballRadius={ getRelative(8) }
-                onClick={ onProgressBarClick }
+                onMouseUpdate={ onProgressBarUpdate }
             />
             <input
                 className="undraggable"

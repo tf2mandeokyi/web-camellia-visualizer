@@ -1,10 +1,12 @@
 export class AudioPlayer {
 
-    context: AudioContext;
+    private context: AudioContext;
 
     albumCoverUri?: string;
-    buffer?: AudioBuffer;
-    bufferSource?: AudioBufferSourceNode;
+    onDonePlaying?: () => void;
+
+    private buffer?: AudioBuffer;
+    private bufferSource?: AudioBufferSourceNode;
     private playing: boolean;
     /** In seconds. */
     private startTime: number;
@@ -17,6 +19,12 @@ export class AudioPlayer {
         this.playing = false;
         this.startTime = this.getNow();
         this.time = 0;
+    }
+
+
+    setDonePlayingHandler(handler: () => void) : AudioPlayer {
+        this.onDonePlaying = handler;
+        return this;
     }
 
 
@@ -131,6 +139,7 @@ export class AudioPlayer {
             this.playing = false;
             this.time = 0;
             this.startTime = now;
+            if(this.onDonePlaying) this.onDonePlaying();
         }
     }
 

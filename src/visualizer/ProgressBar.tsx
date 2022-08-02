@@ -15,7 +15,7 @@ interface ProgressBarProps {
     current: number;
     total: number;
     ballRadius: number;
-    onClick?: ProgressBarClickHandler;
+    onMouseUpdate?: ProgressBarClickHandler;
 }
 
 
@@ -30,7 +30,7 @@ const ProgressBar : React.FC<ProgressBarProps> = (props) => {
         let t = relX / props.width;
         if(t < 0) t = 0;
         if(t > 1) t = 1;
-        if(props.onClick) props.onClick(t * props.total);
+        if(props.onMouseUpdate) props.onMouseUpdate(t * props.total);
     }, [ props ]);
 
 
@@ -66,7 +66,7 @@ const ProgressBar : React.FC<ProgressBarProps> = (props) => {
         canvas.style.left = (props.left - ballRadius) + 'px';
         canvas.style.top = (props.y - ballRadius) + 'px';
         canvas.width = props.width + 2 * ballRadius;
-        canvas.height = ballRadius * 2;
+        canvas.height = ballRadius * 2 + 1;
 
         const ctx = canvas.getContext('2d');
         if(!ctx) return;
