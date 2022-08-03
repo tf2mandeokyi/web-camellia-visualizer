@@ -12,7 +12,7 @@ enum BufferState {
 
 export class FourierWorkerManager {
 
-    private worker: CustomFourierWorker;
+    private worker?: CustomFourierWorker;
 
     private splitChannelBuffer?: Float32Array[];
     private framerate: number;
@@ -25,9 +25,7 @@ export class FourierWorkerManager {
 
 
     constructor(duration: number, framerate: number, transformZoom = 1) {
-        let worker = new Worker(new URL('./fourierWorker.js', import.meta.url)) as CustomFourierWorker;
-        worker.onmessage = this.handleWorkerMessage.bind(this);
-        this.worker = worker;
+        this.resetWorker();
         this.framerate = framerate;
         this.transformZoom = transformZoom;
 
@@ -39,6 +37,16 @@ export class FourierWorkerManager {
     }
 
 
+    private resetWorker() {
+        if(this.worker) {
+            this.worker.terminate();
+        }
+        let worker = new Worker(new URL('./fourierWorker.js', import.meta.url)) as CustomFourierWorker;
+        worker.onmessage = this.handleWorkerMessage.bind(this);
+        this.worker = worker;
+    }
+
+
     setAudioBuffer(buffer: AudioBuffer) {
         let bufferSize = this.transformBuffer.length;
         let { numberOfChannels, sampleRate, length } = buffer;
@@ -47,7 +55,7 @@ export class FourierWorkerManager {
             this.bufferStateArray[i] = BufferState.NOT_READY;
         }
         this.ready = false;
-        this.worker.postMessage({
+        this.worker?.postMessage({
             type: 'split',
             channels: new Array(numberOfChannels).fill(0).map((_, i) => buffer.getChannelData(i)),
             length, sampleRate, framerate: this.framerate,
@@ -77,37 +85,51 @@ export class FourierWorkerManager {
 
         return new Promise<FrameData | undefined>((res, _) => {
 
-            let start = 0, end = -1, containsIndex: boolean = false;
-            if(index <= this.lastFetchedIndex - bufferSize) {
-                start = index; end = index + bufferSize - 1;
-            }
-            else if(index < this.lastFetchedIndex) {
-                start = index; end = this.lastFetchedIndex - 1;
-            }
-            else if(index === this.lastFetchedIndex) {
-                containsIndex = true;
-            }
-            else if(index < this.lastFetchedIndex + bufferSize) {
-                containsIndex = true;
-                start = this.lastFetchedIndex + bufferSize; end = index + bufferSize - 1;
-            }
-            else {
-                start = index; end = index + bufferSize - 1;
-            }
+            let { start, end, containsIndex } = this.getRequiredRange(index);
 
             let bufferIndex = index % bufferSize;
             if(containsIndex && this.bufferStateArray[bufferIndex] === BufferState.READY) {
                 res(this.transformBuffer[bufferIndex]);
             }
 
-            for(let i = start; i <= end; i++) {
-                bufferIndex = i % bufferSize;
-                this.bufferStateArray[bufferIndex] = BufferState.CALCULATING;
-                this.sendMessage(i);
+            if(!containsIndex) {
+                this.resetWorker();
+            }
+            if(end >= start) {
+                for(let i = start; i <= end; i++) {
+                    bufferIndex = i % bufferSize;
+                    this.bufferStateArray[bufferIndex] = BufferState.CALCULATING;
+                    this.sendMessage(i);
+                }
             }
             this.lastFetchedIndex = index;
             res(undefined);
         })
+    }
+
+
+    private getRequiredRange(index: number) {
+        let bufferSize = this.transformBuffer.length;
+
+        let start = 0, end = -1, containsIndex: boolean = false;
+        if(index <= this.lastFetchedIndex - bufferSize) {
+            start = index; end = index + bufferSize - 1;
+        }
+        else if(index < this.lastFetchedIndex) {
+            start = index; end = this.lastFetchedIndex - 1;
+        }
+        else if(index === this.lastFetchedIndex) {
+            containsIndex = true;
+        }
+        else if(index < this.lastFetchedIndex + bufferSize) {
+            containsIndex = true;
+            start = this.lastFetchedIndex + bufferSize; end = index + bufferSize - 1;
+        }
+        else {
+            start = index; end = index + bufferSize - 1;
+        }
+
+        return { start, end, containsIndex };
     }
 
 
@@ -139,7 +161,7 @@ export class FourierWorkerManager {
         if(!this.splitChannelBuffer)
             throw new Error('Tried to send message to worker while no audio buffer is set');
 
-        this.worker.postMessage({
+        this.worker?.postMessage({
             type: 'single',
             index: frameIndex,
             waveData: this.splitChannelBuffer[frameIndex],
