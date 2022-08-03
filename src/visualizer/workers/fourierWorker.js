@@ -41,8 +41,7 @@ function combineChannels(channels, startIndex, length) {
                 temp += channel[index];
             }
         }
-        temp /= channels.length;
-        combined[j] = temp * blackmanHarris4(length, j);
+        combined[j] = temp / channels.length;
 
         if(min > temp) min = temp;
         if(max < temp) max = temp;
@@ -53,23 +52,27 @@ function combineChannels(channels, startIndex, length) {
 
 
 /**
- * 
- * @param { Float32Array[] } channels 
- * @param { number } startIndex 
- * @param { number } power 
- * @param { import('../../fft').FastRealFourierTransform } fourierObject 
- * @returns { {
- *     fourierTransform: Float32Array, 
- *     volume: number 
- * } }
+ * @param { Float32Array } waveData
+ * @returns { number }
  */
-function step(channels, startIndex, power, fourierObject) {
+function getVolumeFromWave(waveData) {
+    let min = +Infinity, max = -Infinity;
 
-    let { combined: slicedBufferArray, volume } = combineChannels(channels, startIndex, power);
+    for(let value of waveData) {
+        if(min > value) min = value;
+        if(max < value) max = value;
+    }
 
-    const fourierArray = fourierObject.realTransform(slicedBufferArray, 'radix-4');
+    return max - min;
+}
 
-    return { fourierTransform: fourierArray, volume };
+
+/**
+ * @param { Float32Array } waveData
+ * @returns { Float32Array }
+ */
+function applyWindowFunction(waveData) {
+    return waveData.map((e, i) => e * blackmanHarris4(waveData.length, i));
 }
 
 
@@ -77,26 +80,36 @@ function step(channels, startIndex, power, fourierObject) {
 onmessage = function(event) {
     let message = event.data;
 
-    if(message.type === 'input') {
-        let { channelsData, transformZoom, sampleRate, dataArrayLength, framerate, customSampleRate } = message;
+    if(message.type === 'split') {
+        let { channels, length, sampleRate, framerate, customSampleRate } = message;
 
         const sampleRatePerFrame = sampleRate / framerate;
-        const frameCount = dataArrayLength / sampleRatePerFrame;
-    
-        const power = customSampleRate ?? Math.pow(2, Math.floor(Math.log(sampleRatePerFrame) / Math.log(2)));
-        const fourierObject = new FastRealFourierTransform(power, transformZoom);
-        const arraySize = Math.floor(frameCount);
+        const frameCount = Math.floor(length / sampleRatePerFrame);
 
-        postmessage({ type: 'start', arraySize });
-        for(let i = 0; i < arraySize; ++i) {
-            let { fourierTransform, volume } = step(
-                channelsData,
-                Math.floor(i * sampleRatePerFrame),
-                power, fourierObject
+        /** @type { Float32Array[] } */
+        let result = new Array(frameCount);
+        const arrayLengthPerFrame = customSampleRate ?? Math.pow(
+            2, Math.floor(Math.log(sampleRatePerFrame) / Math.log(2))
+        );
+
+        for(let i = 0; i < frameCount; ++i) {
+            let { combined } = combineChannels(
+                channels, Math.floor(i * sampleRatePerFrame), arrayLengthPerFrame
             )
-            postmessage({ type: 'part', index: i, fourierTransform, volume });
+            result[i] = combined;
         }
-    
-        postmessage({ type: 'done' });
+        postmessage({ type: 'split', result });
+    }
+    else if(message.type === 'single') {
+        let { index, waveData, zoom } = message;
+
+        let volume = getVolumeFromWave(waveData);
+
+        /** @type { import('../../fft').FastRealFourierTransform } */
+        const fourierObject = new FastRealFourierTransform(waveData.length, zoom);
+        let transformResult = fourierObject.realTransform(applyWindowFunction(waveData), 'radix-4');
+        console.log('Success'); // TODO: remove this logging
+
+        postmessage({ type: 'single', index, transformResult, volume });
     }
 }

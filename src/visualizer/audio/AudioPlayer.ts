@@ -44,8 +44,11 @@ export class AudioPlayer {
         const decoded = await this.context.decodeAudioData(buffer);
         if(!decoded) throw new Error('Audio decode error');
 
+        if(this.buffer) this.stop();
+
         this.buffer = decoded;
         this.playing = false;
+        this.time = 0;
 
         return decoded;
     }

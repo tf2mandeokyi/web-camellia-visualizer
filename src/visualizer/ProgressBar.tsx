@@ -22,7 +22,6 @@ interface ProgressBarProps {
 const ProgressBar : React.FC<ProgressBarProps> = (props) => {
 
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    const isDragging = useRef<boolean>(false);
 
 
     const mouseUpdate = useCallback((event: MouseEvent | React.MouseEvent) => {
@@ -40,21 +39,9 @@ const ProgressBar : React.FC<ProgressBarProps> = (props) => {
         let x = event.clientX, y = event.clientY;
         let rect = canvasRef.current.getBoundingClientRect();
         if(x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
-            isDragging.current = true;
             mouseUpdate(event);
         }
     }, [ mouseUpdate ]);
-
-
-    const globalMouseMoveHandler = useCallback((event: MouseEvent) => {
-        if(!canvasRef.current || !isDragging.current) return;
-        mouseUpdate(event);
-    }, [ mouseUpdate ]);
-
-
-    const globalMouseUpHandler = useCallback(() => {
-        isDragging.current = false;
-    }, []);
 
 
     useEffect(() => {
@@ -97,12 +84,8 @@ const ProgressBar : React.FC<ProgressBarProps> = (props) => {
 
     useEffect(() => {
         window.addEventListener('mousedown', globalMouseDownHandler);
-        window.addEventListener('mouseup', globalMouseUpHandler);
-        window.addEventListener('mousemove', globalMouseMoveHandler);
         return () => {
             window.removeEventListener('mousedown', globalMouseDownHandler);
-            window.removeEventListener('mouseup', globalMouseUpHandler);
-            window.removeEventListener('mousemove', globalMouseMoveHandler);
         }
     })
 
