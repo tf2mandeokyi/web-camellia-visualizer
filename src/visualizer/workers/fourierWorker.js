@@ -108,7 +108,6 @@ onmessage = function(event) {
         /** @type { import('../../fft').FastRealFourierTransform } */
         const fourierObject = new FastRealFourierTransform(waveData.length, zoom);
         let transformResult = fourierObject.realTransform(applyWindowFunction(waveData), 'radix-4');
-        console.log('Success'); // TODO: remove this logging
 
         postmessage({ type: 'single', index, transformResult, volume });
     }
