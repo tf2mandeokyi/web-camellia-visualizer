@@ -6,9 +6,9 @@ import Background from './image/Background'
 import AudioSpectrum from './spectrum/AudioSpectrum';
 import AlbumCover, { AlbumCoverClickHandler } from './image/AlbumCover'
 import ProgressBar, { ProgressBarClickHandler } from './ProgressBar';
-import * as FourierWorker from './workers/fourierWorker';
 
 import './CamelliaVisualizer.css'
+import { FourierWorkerManager } from './workers/FourierWorkerManager';
 
 
 const emptyArrayOnDisplay = new Float32Array([0, 0]);
@@ -53,32 +53,24 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
     );
     
     const [ processingText, setProcessingText ] = useState<string>("");
-
-    const [ parsedArray, setParsedArray ] = useState<Float32Array[]>();
     const [ arrayOnDisplay, setArrayOnDisplay ] = useState<Float32Array>(emptyArrayOnDisplay);
-    const processedParsedArray = useRef<Float32Array[]>();
-
-    const [ volumeArray, setVolumeArray ] = useState<Float32Array>();
     const [ volumeOnDisplay, setVolumeOnDisplay ] = useState<number>(0);
-    const processedVolumeArray = useRef<Float32Array>();
-
     const [ imageSrc, setImageSrc ] = useState<string>();
 
 
-    const calculationWorkerRef = useRef<FourierWorker.CustomFourierWorker>();
     const playerRef = useRef<AudioPlayer>();
+    const workerHandlerRef = useRef<FourierWorkerManager>();
+    const readingStateRef = useRef<boolean>(false);
 
     const inputFileRef = useRef<HTMLInputElement>(null);
     const repeatCheckboxRef = useRef<HTMLInputElement>(null);
     const imageSrcInputRef = useRef<HTMLInputElement>(null);
 
-    const processRef = useRef<number>(-1);
-
 
     const start = useCallback((options: { seconds?: number, forced?: boolean } = {}) => {
         let { seconds, forced } = options;
 
-        if(processRef.current !== -1) return;
+        if(!workerHandlerRef.current?.isAudioBufferInserted()) return;
 
         let player = playerRef.current;
         if(!player?.isAudioInserted()) return;
@@ -86,33 +78,38 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
         if(forced ? true : !player.isPlaying()) {
             player.start(seconds);
         }
-    }, [ parsedArray ]);
+    }, []);
 
 
     const stop = useCallback((resetTime?: boolean) => {
-        if(processRef.current === -1 && playerRef.current?.isAudioInserted())
+        if(playerRef.current?.isAudioInserted())
             playerRef.current.stop(resetTime);
     }, []);
 
 
     const updateProcessString = useCallback(() => {
-        if(processRef.current === -1) {
+        if(readingStateRef.current) {
+            setProcessingText(`Reading...`);
+        } else {
             setProcessingText("");
-        } else if(processRef.current === 0) {
-            setProcessingText("Reading...");
-        } else if(processRef.current > 0) {
-            setProcessingText(`Calculating: ${Math.trunc(processRef.current * 100) / 100}%`);
         }
     }, []);
 
 
-    const updateSpectrum = useCallback(() => {
-        let frame = Math.floor((playerRef.current?.getTime() ?? 0) * props.framerate);
-        let array = parsedArray?.[frame];
-        let mag = volumeArray?.[frame];
-        setArrayOnDisplay(array ?? emptyArrayOnDisplay);
-        setVolumeOnDisplay(mag ?? 0);
-    }, [ props, parsedArray, volumeArray ]);
+    const updateSpectrum = useCallback(async () => {
+        if(!workerHandlerRef.current) return;
+
+        if(workerHandlerRef.current.isAudioBufferInserted()) {
+            let frame = Math.floor((playerRef.current?.getTime() ?? 0) * props.framerate);
+            let frameData = await workerHandlerRef.current.getFrameData(frame);
+            if(frameData) {
+                let { transformArray, volume } = frameData;
+                setArrayOnDisplay(transformArray);
+                setVolumeOnDisplay(volume);
+                return;
+            }
+        }
+    }, [ props ]);
     
 
     const loop = useCallback(() => {
@@ -122,37 +119,33 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
 
 
     const onFileSelection = useCallback(async () => {
-        processRef.current = 0;
+        readingStateRef.current = true;
         try {
             let player = playerRef.current;
-            if(!player) { processRef.current = -1; return; }
+            if(!player) return;
 
-            let worker = calculationWorkerRef.current;
-            if(!worker) { processRef.current = -1; return; }
+            let workerHandler = workerHandlerRef.current;
+            if(!workerHandler) return;
 
             const inputFile = inputFileRef.current?.files?.[0];
-            if(!inputFile) { processRef.current = -1; return; }
+            if(!inputFile) return;
 
             let decoded = await player.insertAudioFile(inputFile);
-            if(player.albumCoverUri) setImageSrc(player.albumCoverUri);
-
-            let { numberOfChannels, sampleRate, length } = decoded;
-            const channelsData = new Array(numberOfChannels).fill(0).map((_, i) => decoded.getChannelData(i));
-
-            // TODO: figure out whether to make the sample rate customizable
-            worker.postMessage({
-                type: 'input',
-                dataArrayLength: length,
-                channelsData, sampleRate,
-                framerate: props.framerate,
-                transformZoom: 4, // Change this property's name
-                customSampleRate: 2048
-            })
+            if(player.albumCoverUri) {
+                setImageSrc(player.albumCoverUri);
+            }
+            workerHandler.setAudioBuffer(decoded);
+            
+            setArrayOnDisplay(emptyArrayOnDisplay);
+            setVolumeOnDisplay(0);
         } catch(e) {
+            let imageInput = imageSrcInputRef.current;
+            if(imageInput) imageInput.value = `${e}`; // TODO: remove this debugging
             console.error(e);
-            processRef.current = -1;
+        } finally {
+            readingStateRef.current = false;
         }
-    }, [ props ]);
+    }, []);
 
 
     const onUrlUpdate : React.ChangeEventHandler<HTMLInputElement> = (event) => {
@@ -161,7 +154,7 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
 
 
     const onProgressBarUpdate : ProgressBarClickHandler = (value) => {
-        if(playerRef.current?.isAudioInserted() && parsedArray) {
+        if(playerRef.current?.isAudioInserted()) {
             playerRef.current.setTime(value, true);
         }
     }
@@ -194,57 +187,16 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
     }, [ triggerStartStop ]);
 
 
-    const handleCalculationWorkerMessage : FourierWorker.MessageHandlerFromOutside = useCallback(({ data }) => {
-        if(!calculationWorkerRef.current) return;
-
-        switch(data.type) {
-            case 'start':
-                let { arraySize } = data;
-                processedParsedArray.current = new Array(arraySize).fill(emptyArrayOnDisplay);
-                processedVolumeArray.current = new Float32Array(arraySize);
-                break;
-
-            case 'part':
-                if(processedParsedArray.current && processedVolumeArray.current) {
-                    let { index, fourierTransform, volume } = data;
-                    processedParsedArray.current[index] = fourierTransform;
-                    processedVolumeArray.current[index] = volume;
-                    processRef.current = 100 * index / processedParsedArray.current.length;
-                }
-                break;
-
-            case 'done':
-                if(processedParsedArray.current && processedVolumeArray.current) {
-                    processRef.current = -1;
-                    setParsedArray(processedParsedArray.current);
-                    setVolumeArray(processedVolumeArray.current);
-                    processedParsedArray.current = undefined;
-                    processedVolumeArray.current = undefined;
-
-                    stop(true);
-                    resetWorker();
-                }
-                break;
+    const setupWorkerHandler = useCallback((forced: boolean = false) => {
+        if(forced || !workerHandlerRef.current) {
+            workerHandlerRef.current = new FourierWorkerManager({
+                cacheBufferDuration: 5, 
+                framerate: props.framerate,
+                customSampleRate: 2048,
+                transformZoom: 4
+            });
         }
-    }, [ stop ]);
-
-
-    const setupWorker = useCallback((forced: boolean = false) => {
-        if(forced || !calculationWorkerRef.current) {
-            let worker = new Worker(new URL('./workers/fourierWorker.js', import.meta.url));
-            worker.onmessage = handleCalculationWorkerMessage;
-            calculationWorkerRef.current = worker;
-        }
-    }, [ handleCalculationWorkerMessage ]);
-
-
-    const resetWorker = useCallback(() => {
-        if(!calculationWorkerRef.current) return;
-        
-        let oldWorker = calculationWorkerRef.current;
-        setupWorker(true);
-        oldWorker.terminate();
-    }, [ setupWorker ]);
+    }, [ props ]);
 
 
     useEffect(() => {
@@ -252,21 +204,19 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
         window.addEventListener('keypress', handleKeyPress);
 
         if(!playerRef.current) {
-            playerRef.current = new AudioPlayer()
-                .setDonePlayingHandler(() => {
-                    if(repeatCheckboxRef.current?.checked) {
-                        start({ seconds: 0, forced: true });
-                    }
-                });
-
+            playerRef.current = new AudioPlayer().setDonePlayingHandler(() => {
+                if(repeatCheckboxRef.current?.checked) {
+                    start({ seconds: 0, forced: true });
+                }
+            });
         }
-        setupWorker();
+        setupWorkerHandler();
 
         return () => {
             window.removeEventListener('resize', handleResize);
             window.removeEventListener('keypress', handleKeyPress);
         }
-    }, [ handleCalculationWorkerMessage, handleKeyPress, setupWorker, start, loop, handleResize ]);
+    }, [ handleKeyPress, setupWorkerHandler, start, loop, handleResize ]);
 
 
     useEffect(() => {
@@ -290,7 +240,7 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
                 width={ getRelative(648) }
                 height={ getRelative(648) }
                 src={ imageSrc }
-                onClick={ parsedArray ? triggerStartStop : undefined }
+                onClick={ workerHandlerRef.current?.isAudioBufferInserted() ? triggerStartStop : undefined }
             />
             <AudioSpectrum 
                 arrayOnDisplay={ arrayOnDisplay }
@@ -309,8 +259,8 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
                 left={ windowSize.width / 2 - getRelative(40) }
                 width={ getRelative(776) }
                 y={ windowSize.height / 2 + getRelative(194) }
-                current={ playerRef.current?.getTime() ?? 0 }
-                total={ (parsedArray?.length ?? 0) / props.framerate }
+                current={ playerRef.current?.isAudioInserted() ? (playerRef.current?.getTime() ?? 0) : 0 }
+                total={ playerRef.current?.isAudioInserted() ? (playerRef.current?.getDuration() ?? 1) : 1 }
                 ballRadius={ getRelative(8) }
                 onMouseUpdate={ onProgressBarUpdate }
             />
@@ -346,4 +296,3 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
 }
 
 export default CamelliaVisualizer;
-  

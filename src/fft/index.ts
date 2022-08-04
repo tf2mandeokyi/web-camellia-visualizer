@@ -1,5 +1,12 @@
-export class FastRealFourierTransform {
+const DEFAULT_BMHARRIS = [ 0.35875, 0.48829, 0.14128, 0.01168 ];
 
+export function blackmanHarris4(N: number, n: number, [ a0, a1, a2, a3 ] = DEFAULT_BMHARRIS) {
+    let w = 2 * Math.PI * n / (N-1);
+    return a0 - a1*Math.cos(w) + a2*Math.cos(2*w) - a3*Math.cos(3*w);
+}
+
+
+export class FastRealFourierTransform {
 
     X?: Float32Array;
     N: number;
@@ -37,10 +44,10 @@ export class FastRealFourierTransform {
     realTransform(inputArray: Float32Array, method: 'radix-2' | 'radix-4') : Float32Array {
         
         const N = inputArray.length;
-        if(N <= 1 && (N & (N - 1)) !== 0) {
-            throw new Error('The size of the input array must be a power of 2 and be bigger than 1');
+        if(N !== this.N) {
+            throw new Error(`The array size is not ${this.N}`);
         }
-
+        
         this.X = inputArray;
         let transformResult: number[];
         switch(method) {

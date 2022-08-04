@@ -3,29 +3,21 @@ declare type MessageWithType<T> = { type: T };
 declare type EmptyMessage = MessageWithType<'empty'>;
 
 // Messages to worker
-declare type InputMessage = MessageWithType<'input'> & {
-    channelsData: Float32Array[];
-    sampleRate: number;
-    dataArrayLength: number;
-    framerate: number;
-    transformZoom: number;
-    customSampleRate?: number;
+declare type SingleArrayMessage = MessageWithType<'single'> & {
+    index: number;
+    splitChannels: Float32Array[];
+    zoom: number;
 }
+declare type MessageToWorker = | SingleArrayMessage | EmptyMessage;
+
 
 // Messages to outside
-declare type StartedMessage = MessageWithType<'start'> & {
-    arraySize: number;
-}
-declare type PartialResultMessage = MessageWithType<'part'> & {
+declare type SingleTransformResultMessage = MessageWithType<'single'> & {
     index: number;
-    fourierTransform: Float32Array;
+    transformResult: Float32Array;
     volume: number;
 }
-declare type DoneMessage = MessageWithType<'done'>;
-
-
-declare type MessageToWorker = InputMessage | EmptyMessage;
-declare type MessageToOutside = StartedMessage | PartialResultMessage | DoneMessage | EmptyMessage;
+declare type MessageToOutside = SingleTransformResultMessage | EmptyMessage;
 
 
 declare type MessageHandlerFromInside = (this: DedicatedWorkerGlobalScope, ev: MessageEvent<MessageToWorker>) => any
