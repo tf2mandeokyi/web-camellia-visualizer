@@ -52,6 +52,7 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
         getContentHeight(windowSize, { width: 3, height: 2 })
     );
     
+    const [ showInputs, setShowInputs ] = useState<boolean>(true);
     const [ processingText, setProcessingText ] = useState<string>("");
     const [ arrayOnDisplay, setArrayOnDisplay ] = useState<Float32Array>(emptyArrayOnDisplay);
     const [ volumeOnDisplay, setVolumeOnDisplay ] = useState<number>(0);
@@ -184,6 +185,9 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
         if(event.key === ' ') {
             triggerStartStop();
         }
+        else if(event.key === 'h') {
+            setShowInputs(s => !s);
+        }
     }, [ triggerStartStop ]);
 
 
@@ -265,7 +269,7 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
                 onMouseUpdate={ onProgressBarUpdate }
             />
             <input
-                className="undraggable"
+                className={ `undraggable ${ showInputs ? '' : 'hidden'}` }
                 id="audio_input" 
                 ref={ inputFileRef } 
                 type="file" accept="audio/*" 
@@ -273,18 +277,20 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
             />
             { processingText }
             <input
+                className={ showInputs ? '' : 'hidden' }
                 id="repeat_checkbox"
                 type="checkbox"
                 ref={ repeatCheckboxRef }
             />
             <input
+                className={ showInputs ? '' : 'hidden' }
                 id="start_button"
                 type="button" 
                 value="STOP"
                 onClick={ () => stop(true) }
             />
             <input
-                className="undraggable"
+                className={ `undraggable ${ showInputs ? '' : 'hidden'}` }
                 ref={ imageSrcInputRef }
                 id="image_input"
                 type="text"
