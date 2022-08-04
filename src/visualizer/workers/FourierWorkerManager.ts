@@ -158,16 +158,20 @@ export class FourierWorkerManager {
         if(!this.audioBuffer)
             throw new Error('Tried to send message to worker while no audio buffer is set');
 
-        let { numberOfChannels } = this.audioBuffer;
+        let buffer = this.audioBuffer;
+        let { numberOfChannels } = buffer;
 
         let lengthPerFrame = (this.bufferLengthPerFrame ?? 0);
         let bufferStartIndex = frameIndex * (this.sampleRatePerFrame ?? 0);
         let bufferEndIndex = bufferStartIndex + lengthPerFrame;
 
-        let splitChannels = new Array(numberOfChannels).fill(0).map((_, i) => {
-            if(!this.audioBuffer) return new Float32Array(0);
-            return this.audioBuffer?.getChannelData(i).slice(bufferStartIndex, bufferEndIndex)
-        });
+        let splitChannels = new Array(numberOfChannels).fill(0).map(
+            bufferEndIndex > buffer.length ?
+            (_, i) => new Float32Array(lengthPerFrame).map(
+                (__, j) => buffer.getChannelData(i)[bufferStartIndex + j] ?? 0
+            ) :
+            (_, i) => buffer.getChannelData(i).slice(bufferStartIndex, bufferEndIndex)
+        );
         
         this.worker?.postMessage({
             type: 'single',

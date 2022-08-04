@@ -44,10 +44,10 @@ export class FastRealFourierTransform {
     realTransform(inputArray: Float32Array, method: 'radix-2' | 'radix-4') : Float32Array {
         
         const N = inputArray.length;
-        if(N <= 1 && (N & (N - 1)) !== 0) {
-            throw new Error('The size of the input array must be a power of 2 and be bigger than 1');
+        if(N !== this.N) {
+            throw new Error(`The array size is not ${this.N}`);
         }
-
+        
         this.X = inputArray;
         let transformResult: number[];
         switch(method) {

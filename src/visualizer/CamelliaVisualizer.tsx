@@ -109,8 +109,6 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
                 return;
             }
         }
-        setArrayOnDisplay(emptyArrayOnDisplay);
-        setVolumeOnDisplay(0);
     }, [ props ]);
     
 
@@ -137,6 +135,9 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
                 setImageSrc(player.albumCoverUri);
             }
             workerHandler.setAudioBuffer(decoded);
+            
+            setArrayOnDisplay(emptyArrayOnDisplay);
+            setVolumeOnDisplay(0);
         } catch(e) {
             let imageInput = imageSrcInputRef.current;
             if(imageInput) imageInput.value = `${e}`; // TODO: remove this debugging
