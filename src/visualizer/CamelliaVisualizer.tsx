@@ -60,6 +60,7 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
 
     const playerRef = useRef<AudioPlayer>();
     const workerHandlerRef = useRef<FourierWorkerManager>();
+    const readingStateRef = useRef<boolean>(false);
 
     const inputFileRef = useRef<HTMLInputElement>(null);
     const repeatCheckboxRef = useRef<HTMLInputElement>(null);
@@ -69,7 +70,7 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
     const start = useCallback((options: { seconds?: number, forced?: boolean } = {}) => {
         let { seconds, forced } = options;
 
-        if(!workerHandlerRef.current?.isReady()) return;
+        if(!workerHandlerRef.current?.isAudioBufferInserted()) return;
 
         let player = playerRef.current;
         if(!player?.isAudioInserted()) return;
@@ -81,24 +82,24 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
 
 
     const stop = useCallback((resetTime?: boolean) => {
-        if(workerHandlerRef.current?.isReady() && playerRef.current?.isAudioInserted())
+        if(playerRef.current?.isAudioInserted())
             playerRef.current.stop(resetTime);
     }, []);
 
 
     const updateProcessString = useCallback(() => {
-        if(workerHandlerRef.current?.isReady()) {
-            setProcessingText("");
-        } else {
+        if(readingStateRef.current) {
             setProcessingText(`Reading...`);
+        } else {
+            setProcessingText("");
         }
     }, []);
 
 
     const updateSpectrum = useCallback(async () => {
-        if(!workerHandlerRef.current?.isReady()) return;
+        if(!workerHandlerRef.current) return;
 
-        if(workerHandlerRef.current.isAudioInserted()) {
+        if(workerHandlerRef.current.isAudioBufferInserted()) {
             let frame = Math.floor((playerRef.current?.getTime() ?? 0) * props.framerate);
             let frameData = await workerHandlerRef.current.getFrameData(frame);
             if(frameData) {
@@ -120,6 +121,7 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
 
 
     const onFileSelection = useCallback(async () => {
+        readingStateRef.current = true;
         try {
             let player = playerRef.current;
             if(!player) return;
@@ -137,8 +139,10 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
             workerHandler.setAudioBuffer(decoded);
         } catch(e) {
             let imageInput = imageSrcInputRef.current;
-            if(imageInput) imageInput.value = `${e}`;
+            if(imageInput) imageInput.value = `${e}`; // TODO: remove this debugging
             console.error(e);
+        } finally {
+            readingStateRef.current = false;
         }
     }, []);
 
@@ -149,7 +153,7 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
 
 
     const onProgressBarUpdate : ProgressBarClickHandler = (value) => {
-        if(playerRef.current?.isAudioInserted() && workerHandlerRef.current?.isReady()) {
+        if(playerRef.current?.isAudioInserted()) {
             playerRef.current.setTime(value, true);
         }
     }
@@ -184,7 +188,12 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
 
     const setupWorkerHandler = useCallback((forced: boolean = false) => {
         if(forced || !workerHandlerRef.current) {
-            workerHandlerRef.current = new FourierWorkerManager(5, props.framerate, 4);
+            workerHandlerRef.current = new FourierWorkerManager({
+                cacheBufferDuration: 5, 
+                framerate: props.framerate,
+                customSampleRate: 2048,
+                transformZoom: 4
+            });
         }
     }, [ props ]);
 
@@ -230,7 +239,7 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
                 width={ getRelative(648) }
                 height={ getRelative(648) }
                 src={ imageSrc }
-                onClick={ workerHandlerRef.current?.isReady() ? triggerStartStop : undefined }
+                onClick={ workerHandlerRef.current?.isAudioBufferInserted() ? triggerStartStop : undefined }
             />
             <AudioSpectrum 
                 arrayOnDisplay={ arrayOnDisplay }

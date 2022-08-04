@@ -1,5 +1,12 @@
-export class FastRealFourierTransform {
+const DEFAULT_BMHARRIS = [ 0.35875, 0.48829, 0.14128, 0.01168 ];
 
+export function blackmanHarris4(N: number, n: number, [ a0, a1, a2, a3 ] = DEFAULT_BMHARRIS) {
+    let w = 2 * Math.PI * n / (N-1);
+    return a0 - a1*Math.cos(w) + a2*Math.cos(2*w) - a3*Math.cos(3*w);
+}
+
+
+export class FastRealFourierTransform {
 
     X?: Float32Array;
     N: number;

@@ -5,29 +5,19 @@ declare type EmptyMessage = MessageWithType<'empty'>;
 // Messages to worker
 declare type SingleArrayMessage = MessageWithType<'single'> & {
     index: number;
-    waveData: Float32Array;
+    splitChannels: Float32Array[];
     zoom: number;
 }
-declare type SplitMessage = MessageWithType<'split'> & {
-    channels: Float32Array[];
-    length: number;
-    sampleRate: number;
-    framerate: number;
-    customSampleRate?: number;
-}
-declare type MessageToWorker = SingleArrayMessage | SplitMessage | EmptyMessage;
+declare type MessageToWorker = | SingleArrayMessage | EmptyMessage;
 
 
 // Messages to outside
-declare type SplitResultMessage = MessageWithType<'split'> & {
-    result: Float32Array[];
-}
 declare type SingleTransformResultMessage = MessageWithType<'single'> & {
     index: number;
     transformResult: Float32Array;
     volume: number;
 }
-declare type MessageToOutside = SplitResultMessage | SingleTransformResultMessage | EmptyMessage;
+declare type MessageToOutside = SingleTransformResultMessage | EmptyMessage;
 
 
 declare type MessageHandlerFromInside = (this: DedicatedWorkerGlobalScope, ev: MessageEvent<MessageToWorker>) => any
