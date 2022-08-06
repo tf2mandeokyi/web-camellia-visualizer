@@ -104,12 +104,12 @@ export class FourierWorkerManager {
 
 
     private resetWorker() {
-        if(this.worker) {
-            this.worker.terminate();
+        let oldWorker = this.worker;
+        this.worker = new Worker(new URL('./fourierWorker.js', import.meta.url)) as CustomFourierWorker;
+        this.worker.onmessage = this.handleWorkerMessage.bind(this);
+        if(oldWorker) {
+            oldWorker.terminate();
         }
-        let worker = new Worker(new URL('./fourierWorker.js', import.meta.url)) as CustomFourierWorker;
-        worker.onmessage = this.handleWorkerMessage.bind(this);
-        this.worker = worker;
     }
 
 
