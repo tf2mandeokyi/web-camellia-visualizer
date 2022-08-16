@@ -8,7 +8,7 @@ import AlbumCover, { AlbumCoverClickHandler } from './image/AlbumCover'
 import ProgressBar, { ProgressBarClickHandler } from './ProgressBar';
 
 import './CamelliaVisualizer.css'
-import { FourierWorkerManager } from './workers/FourierWorkerManager';
+import * as FourierWorkerManager from './fw_manager';
 
 
 const emptyArrayOnDisplay = new Float32Array([0, 0]);
@@ -60,7 +60,7 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
 
 
     const playerRef = useRef<AudioPlayer>();
-    const workerHandlerRef = useRef<FourierWorkerManager>();
+    const workerHandlerRef = useRef<FourierWorkerManager.AbstractFourierWorkerManager>();
     const readingStateRef = useRef<boolean>(false);
 
     const inputFileRef = useRef<HTMLInputElement>(null);
@@ -193,7 +193,7 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
 
     const setupWorkerHandler = useCallback((forced: boolean = false) => {
         if(forced || !workerHandlerRef.current) {
-            workerHandlerRef.current = new FourierWorkerManager({
+            workerHandlerRef.current = FourierWorkerManager.fromMethod('buffer', {
                 cacheBufferDuration: 5, 
                 framerate: props.framerate,
                 customSampleRate: 2048,

@@ -1,46 +1,27 @@
-import { CustomFourierWorker, MessageToOutside } from './fourierWorker';
+import { MessageToOutside } from '../fourier_worker';
+import { AbstractFourierWorkerManager, FrameData, AFWMConstructorArgs } from './abstract' 
 
-
-interface FrameData {
-    transformArray: Float32Array;
-    volume: number;
-}
 
 enum CacheState {
     NOT_READY = 0, CALCULATING = 1, READY = 2
 }
 
-interface FWMConstructorArgs {
+export type BFWMConstructorArgs = AFWMConstructorArgs & {
     cacheBufferDuration: number;
-    framerate: number;
-    transformZoom?: number;
-    customSampleRate?: number;
 }
 
-export class FourierWorkerManager {
 
-    private worker?: CustomFourierWorker;
-    
-    private framerate: number;
-    private transformZoom: number;
-    private customSampleRate?: number;
-
-    private audioBuffer?: AudioBuffer;
-    private sampleRatePerFrame?: number;
-    private bufferLengthPerFrame?: number;
+export class BufferFourierWorkerManager extends AbstractFourierWorkerManager {
     
     private lastRequestedIndex: number;
     private cacheDataArray: (FrameData | undefined)[];
     private cacheStateArray: CacheState[];
 
 
-    constructor({ cacheBufferDuration: duration, framerate, transformZoom = 1, customSampleRate }: FWMConstructorArgs) {
-        this.resetWorker();
-        this.framerate = framerate;
-        this.transformZoom = transformZoom;
-        this.customSampleRate = customSampleRate;
+    constructor({ cacheBufferDuration, framerate, transformZoom = 1, customSampleRate }: BFWMConstructorArgs) {
+        super({ framerate, transformZoom, customSampleRate })
 
-        let bufferSize = Math.floor(duration * framerate);
+        let bufferSize = Math.floor(cacheBufferDuration * framerate);
         this.cacheDataArray = new Array<FrameData | undefined>(bufferSize).fill(undefined);
         this.cacheStateArray = new Array<CacheState>(bufferSize).fill(CacheState.NOT_READY);
         this.lastRequestedIndex = 0;
@@ -48,9 +29,9 @@ export class FourierWorkerManager {
 
 
     setAudioBuffer(buffer: AudioBuffer) {
+        super.setAudioBuffer(buffer);
+
         let bufferSize = this.cacheDataArray.length;
-        this.audioBuffer = buffer;
-        
         let { sampleRate } = buffer;
         this.sampleRatePerFrame = sampleRate / this.framerate;
         this.bufferLengthPerFrame = this.customSampleRate ?? Math.pow(
@@ -61,11 +42,6 @@ export class FourierWorkerManager {
             this.cacheStateArray[i] = CacheState.CALCULATING;
             this.sendMessage(i);
         }
-    }
-
-
-    isAudioBufferInserted() : boolean {
-        return this.audioBuffer !== undefined;
     }
 
 
@@ -103,16 +79,6 @@ export class FourierWorkerManager {
     }
 
 
-    private resetWorker() {
-        let oldWorker = this.worker;
-        this.worker = new Worker(new URL('./fourierWorker.js', import.meta.url)) as CustomFourierWorker;
-        this.worker.onmessage = this.handleWorkerMessage.bind(this);
-        if(oldWorker) {
-            oldWorker.terminate();
-        }
-    }
-
-
     private getCalculationRequiredRange(index: number) {
         let bufferSize = this.cacheDataArray.length;
 
@@ -138,7 +104,7 @@ export class FourierWorkerManager {
     }
 
 
-    private handleWorkerMessage({ data }: MessageEvent<MessageToOutside>) {
+    protected handleWorkerMessage({ data }: MessageEvent<MessageToOutside>) {
         let bufferSize = this.cacheDataArray.length;
 
         if(data.type === 'single') {
@@ -154,7 +120,7 @@ export class FourierWorkerManager {
     }
 
 
-    private sendMessage(frameIndex: number) {
+    protected sendMessage(frameIndex: number) {
         if(!this.audioBuffer)
             throw new Error('Tried to send message to worker while no audio buffer is set');
 
@@ -180,4 +146,5 @@ export class FourierWorkerManager {
             zoom: this.transformZoom
         })
     }
+
 }

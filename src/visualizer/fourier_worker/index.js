@@ -1,10 +1,10 @@
-/// <reference path="fourierWorker.d.ts"/>
+/// <reference path="index.d.ts"/>
 
 const { FastRealFourierTransform, blackmanHarris4 } = require('../../fft/index.ts');
 
 
 /**
- * @param { import('./fourierWorker').MessageToOutside } data
+ * @param { import('.').MessageToOutside } data
  * @param { Transferable[] | undefined } transfer
  */
 function postmessage(data, transfer) {
@@ -39,7 +39,7 @@ function combineChannelsAndGetVolume(channels) {
 }
 
 
-/** @type { import("./fourierWorker").MessageHandlerFromInside } */
+/** @type { import(".").MessageHandlerFromInside } */
 onmessage = function(event) {
     let message = event.data;
 
