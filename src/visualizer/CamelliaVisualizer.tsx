@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { FillStrokeColor } from './FillStrokeColor';
+import { FillStrokeColor, mergeColor } from './FillStrokeColor';
 import { AudioPlayer } from './audio/AudioPlayer';
 import ScheduledRepeater from './repeater/ScheduledRepeater';
 import Background from './image/Background'
@@ -28,16 +28,6 @@ interface CamelliaVisualzerProps {
 }
 
 
-function mergeColor(color: Partial<FillStrokeColor> | undefined, defaultColor: FillStrokeColor) : FillStrokeColor {
-    if(color === undefined || color === null) return defaultColor; 
-    return {
-        fill: color.fill ?? defaultColor.fill,
-        stroke: color.stroke ?? defaultColor.stroke,
-        lineWidth: color.lineWidth ?? defaultColor.lineWidth
-    };
-}
-
-
 function getContentHeight(windowSize: WidthHeight, ratio: WidthHeight) {
     let widthDivided = windowSize.width / ratio.width;
     let heightDivided = windowSize.height / ratio.height;
@@ -54,6 +44,7 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
     
     const [ showInputs, setShowInputs ] = useState<boolean>(true);
     const [ processingText, setProcessingText ] = useState<string>("");
+    const [ currentFrame, setCurrentFrame ] = useState<number>(-1);
     const [ arrayOnDisplay, setArrayOnDisplay ] = useState<Float32Array>(emptyArrayOnDisplay);
     const [ volumeOnDisplay, setVolumeOnDisplay ] = useState<number>(0);
     const [ imageSrc, setImageSrc ] = useState<string>();
@@ -101,14 +92,27 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
         if(!workerHandlerRef.current) return;
 
         if(workerHandlerRef.current.isAudioBufferInserted()) {
+            let _currentFrame = currentFrame;
+
+            // Change smoothly if no "frame jumps"
             let frame = Math.floor((playerRef.current?.getTime() ?? 0) * props.framerate);
-            let frameData = await workerHandlerRef.current.getFrameData(frame);
+            if(_currentFrame < frame) {
+                _currentFrame = frame - _currentFrame > 5 ? frame : _currentFrame + 1;
+            }
+            else if(_currentFrame > frame) {
+                _currentFrame = frame;
+            }
+
+            let frameData = await workerHandlerRef.current.getFrameData(_currentFrame);
             if(frameData) {
+                if(_currentFrame !== currentFrame) setCurrentFrame(_currentFrame);
+
                 let { transformArray, volume } = frameData;
                 setArrayOnDisplay(transformArray);
                 setVolumeOnDisplay(volume);
                 return;
             }
+
         }
     }, [ props ]);
     
@@ -137,6 +141,7 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
             }
             workerHandler.setAudioBuffer(decoded);
             
+            setCurrentFrame(0);
             setArrayOnDisplay(emptyArrayOnDisplay);
             setVolumeOnDisplay(0);
         } catch(e) {
