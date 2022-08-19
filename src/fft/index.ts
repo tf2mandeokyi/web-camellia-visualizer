@@ -1,8 +1,35 @@
 const DEFAULT_BMHARRIS = [ 0.35875, 0.48829, 0.14128, 0.01168 ];
-
 export function blackmanHarris4(N: number, n: number, [ a0, a1, a2, a3 ] = DEFAULT_BMHARRIS) {
     let w = 2 * Math.PI * n / (N-1);
     return a0 - a1*Math.cos(w) + a2*Math.cos(2*w) - a3*Math.cos(3*w);
+}
+
+
+type WindowFunction = (N: number, n: number) => number;
+
+export function applyWindowFunction(channels: Float32Array[], wfunc: WindowFunction) : {
+    channelsCombined: Float32Array,
+    volume: number
+} {
+    let length = channels[0].length;
+
+    const channelsCombined = new Float32Array(length);
+    let min = +Infinity, max = -Infinity;
+
+    for(let j = 0; j < length; ++j) {
+        let value = 0;
+        
+        for(let channel of channels) {
+            if(j < channel.length) value += channel[j];
+        }
+        value /= channels.length;
+        
+        channelsCombined[j] = value * wfunc(length, j);
+        if(min > value) min = value;
+        if(max < value) max = value;
+    }
+
+    return { channelsCombined, volume: max - min }
 }
 
 

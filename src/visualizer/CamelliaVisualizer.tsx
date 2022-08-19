@@ -8,7 +8,7 @@ import AlbumCover, { AlbumCoverClickHandler } from './image/AlbumCover'
 import ProgressBar, { ProgressBarClickHandler } from './ProgressBar';
 
 import './CamelliaVisualizer.css'
-import * as FourierWorkerManager from './fw_manager';
+import * as FourierWorkerManager from './fourier_calc';
 
 
 const emptyArrayOnDisplay = new Float32Array([0, 0]);
@@ -51,7 +51,7 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
 
 
     const playerRef = useRef<AudioPlayer>();
-    const workerHandlerRef = useRef<FourierWorkerManager.AbstractFourierWorkerManager>();
+    const workerHandlerRef = useRef<FourierWorkerManager.AbstractFourierCalculator>();
     const readingStateRef = useRef<boolean>(false);
 
     const inputFileRef = useRef<HTMLInputElement>(null);
@@ -62,7 +62,7 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
     const start = useCallback((options: { seconds?: number, forced?: boolean } = {}) => {
         let { seconds, forced } = options;
 
-        if(!workerHandlerRef.current?.isAudioBufferInserted()) return;
+        if(!workerHandlerRef.current?.isAudioBufferSet()) return;
 
         let player = playerRef.current;
         if(!player?.isAudioInserted()) return;
@@ -91,7 +91,7 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
     const updateSpectrum = useCallback(async () => {
         if(!workerHandlerRef.current) return;
 
-        if(workerHandlerRef.current.isAudioBufferInserted()) {
+        if(workerHandlerRef.current.isAudioBufferSet()) {
             let _currentFrame = currentFrame;
 
             // Change smoothly if no "frame jumps"
@@ -114,7 +114,7 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
             }
 
         }
-    }, [ props ]);
+    }, [ props, currentFrame ]);
     
 
     const loop = useCallback(() => {
@@ -198,7 +198,8 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
 
     const setupWorkerHandler = useCallback((forced: boolean = false) => {
         if(forced || !workerHandlerRef.current) {
-            workerHandlerRef.current = FourierWorkerManager.fromMethod('buffer', {
+            // TODO: Set method type customizable
+            workerHandlerRef.current = FourierWorkerManager.fromMethod('buffer' /* 'real-time' */, {
                 cacheBufferDuration: 5, 
                 framerate: props.framerate,
                 customSampleRate: 2048,
@@ -249,7 +250,7 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
                 width={ getRelative(648) }
                 height={ getRelative(648) }
                 src={ imageSrc }
-                onClick={ workerHandlerRef.current?.isAudioBufferInserted() ? triggerStartStop : undefined }
+                onClick={ workerHandlerRef.current?.isAudioBufferSet() ? triggerStartStop : undefined }
             />
             <AudioSpectrum 
                 arrayOnDisplay={ arrayOnDisplay }

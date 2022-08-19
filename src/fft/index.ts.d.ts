@@ -1,1 +1,5 @@
-export { FastRealFourierTransform, blackmanHarris4 } from './index'
+export { 
+    FastRealFourierTransform,
+    blackmanHarris4,
+    applyWindowFunction
+} from './index'

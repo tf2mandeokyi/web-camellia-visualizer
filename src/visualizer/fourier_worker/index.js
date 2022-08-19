@@ -1,6 +1,6 @@
 /// <reference path="index.d.ts"/>
 
-const { FastRealFourierTransform, blackmanHarris4 } = require('../../fft/index.ts');
+const { FastRealFourierTransform, blackmanHarris4, applyWindowFunction } = require('../../fft/index.ts');
 
 
 /**
@@ -12,33 +12,6 @@ function postmessage(data, transfer) {
 }
 
 
-/**
- * @param { Float32Array[] } channels
- * @returns { { combined: Float32Array, volume: number } }
- */
-function combineChannelsAndGetVolume(channels) {
-    let length = channels[0].length;
-
-    const combined = new Float32Array(length);
-    let min = +Infinity, max = -Infinity;
-
-    for(let j = 0; j < length; ++j) {
-        let value = 0;
-        
-        for(let channel of channels) {
-            if(j < channel.length) value += channel[j];
-        }
-        value /= channels.length;
-        
-        combined[j] = value * blackmanHarris4(length, j);
-        if(min > value) min = value;
-        if(max < value) max = value;
-    }
-
-    return { combined, volume: max - min }
-}
-
-
 /** @type { import(".").MessageHandlerFromInside } */
 onmessage = function(event) {
     let message = event.data;
@@ -46,10 +19,10 @@ onmessage = function(event) {
     if(message.type === 'single') {
         let { index, splitChannels, zoom } = message;
 
-        let { combined, volume } = combineChannelsAndGetVolume(splitChannels);
+        let { channelsCombined, volume } = applyWindowFunction(splitChannels, blackmanHarris4);
 
-        const fourierObject = new FastRealFourierTransform(combined.length, zoom);
-        let transformResult = fourierObject.realTransform(combined, 'radix-4');
+        const fourierObject = new FastRealFourierTransform(channelsCombined.length, zoom);
+        let transformResult = fourierObject.realTransform(channelsCombined, 'radix-4');
 
         postmessage({ type: 'single', index, transformResult, volume });
     }

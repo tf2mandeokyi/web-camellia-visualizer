@@ -1,24 +1,24 @@
 import { MessageToOutside } from '../fourier_worker';
-import { AbstractFourierWorkerManager, FrameData, AFWMConstructorArgs } from './abstract' 
+import { AbstractFourierWorkerCalculator, FrameData, AFCConstructorArgs } from './abstract' 
 
 
 enum CacheState {
     NOT_READY = 0, CALCULATING = 1, READY = 2
 }
 
-export type BFWMConstructorArgs = AFWMConstructorArgs & {
+export type BFCConstructorArgs = AFCConstructorArgs & {
     cacheBufferDuration: number;
 }
 
 
-export class BufferFourierWorkerManager extends AbstractFourierWorkerManager {
+export class BufferedFourierCalculator extends AbstractFourierWorkerCalculator {
     
     private lastRequestedIndex: number;
     private cacheDataArray: (FrameData | undefined)[];
     private cacheStateArray: CacheState[];
 
 
-    constructor({ cacheBufferDuration, framerate, transformZoom = 1, customSampleRate }: BFWMConstructorArgs) {
+    constructor({ cacheBufferDuration, framerate, transformZoom = 1, customSampleRate }: BFCConstructorArgs) {
         super({ framerate, transformZoom, customSampleRate })
 
         let bufferSize = Math.floor(cacheBufferDuration * framerate);
@@ -31,21 +31,14 @@ export class BufferFourierWorkerManager extends AbstractFourierWorkerManager {
     setAudioBuffer(buffer: AudioBuffer) {
         super.setAudioBuffer(buffer);
 
-        let bufferSize = this.cacheDataArray.length;
-        let { sampleRate } = buffer;
-        this.sampleRatePerFrame = sampleRate / this.framerate;
-        this.bufferLengthPerFrame = this.customSampleRate ?? Math.pow(
-            2, Math.floor(Math.log(this.sampleRatePerFrame) / Math.log(2))
-        );
-
-        for(let i = 0; i < bufferSize; i++) {
+        for(let i = 0; i < this.cacheDataArray.length; i++) {
             this.cacheStateArray[i] = CacheState.CALCULATING;
             this.sendMessage(i);
         }
     }
 
 
-    async getFrameData(index: number) : Promise<FrameData | undefined> {
+    getFrameData(index: number) : FrameData | undefined {
 
         if(!this.audioBuffer)
             throw new Error('Tried to get frame data while no audio buffer is set');
@@ -53,29 +46,25 @@ export class BufferFourierWorkerManager extends AbstractFourierWorkerManager {
             throw new Error('Illegal index');
 
         let bufferSize = this.cacheDataArray.length;
+        let { start, end, containsIndex } = this.getCalculationRequiredRange(index);
 
-        return new Promise<FrameData | undefined>((res, _) => {
+        let bufferIndex = index % bufferSize;
+        if(containsIndex && this.cacheStateArray[bufferIndex] === CacheState.READY) {
+            return this.cacheDataArray[bufferIndex];
+        }
 
-            let { start, end, containsIndex } = this.getCalculationRequiredRange(index);
-
-            let bufferIndex = index % bufferSize;
-            if(containsIndex && this.cacheStateArray[bufferIndex] === CacheState.READY) {
-                res(this.cacheDataArray[bufferIndex]);
+        if(!containsIndex) {
+            this.resetWorker();
+        }
+        if(end >= start) {
+            for(let i = start; i <= end; i++) {
+                bufferIndex = i % bufferSize;
+                this.cacheStateArray[bufferIndex] = CacheState.CALCULATING;
+                this.sendMessage(i);
             }
-
-            if(!containsIndex) {
-                this.resetWorker();
-            }
-            if(end >= start) {
-                for(let i = start; i <= end; i++) {
-                    bufferIndex = i % bufferSize;
-                    this.cacheStateArray[bufferIndex] = CacheState.CALCULATING;
-                    this.sendMessage(i);
-                }
-            }
-            this.lastRequestedIndex = index;
-            res(undefined);
-        })
+        }
+        this.lastRequestedIndex = index;
+        return undefined;
     }
 
 
@@ -124,25 +113,10 @@ export class BufferFourierWorkerManager extends AbstractFourierWorkerManager {
         if(!this.audioBuffer)
             throw new Error('Tried to send message to worker while no audio buffer is set');
 
-        let buffer = this.audioBuffer;
-        let { numberOfChannels } = buffer;
-
-        let lengthPerFrame = (this.bufferLengthPerFrame ?? 0);
-        let bufferStartIndex = frameIndex * (this.sampleRatePerFrame ?? 0);
-        let bufferEndIndex = bufferStartIndex + lengthPerFrame;
-
-        let splitChannels = new Array(numberOfChannels).fill(0).map(
-            bufferEndIndex > buffer.length ?
-            (_, i) => new Float32Array(lengthPerFrame).map(
-                (__, j) => buffer.getChannelData(i)[bufferStartIndex + j] ?? 0
-            ) :
-            (_, i) => buffer.getChannelData(i).slice(bufferStartIndex, bufferEndIndex)
-        );
-        
         this.worker?.postMessage({
             type: 'single',
             index: frameIndex,
-            splitChannels,
+            splitChannels: this.getSplitChannelData(frameIndex),
             zoom: this.transformZoom
         })
     }
