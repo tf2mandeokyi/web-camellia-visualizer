@@ -49,8 +49,9 @@ export class BufferedFourierCalculator extends AbstractFourierWorkerCalculator {
         let { start, end, containsIndex } = this.getCalculationRequiredRange(index);
 
         let bufferIndex = index % bufferSize;
+        let result: FrameData | undefined = undefined;
         if(containsIndex && this.cacheStateArray[bufferIndex] === CacheState.READY) {
-            return this.cacheDataArray[bufferIndex];
+            result = this.cacheDataArray[bufferIndex];
         }
 
         if(!containsIndex) {
@@ -63,8 +64,9 @@ export class BufferedFourierCalculator extends AbstractFourierWorkerCalculator {
                 this.sendMessage(i);
             }
         }
+
         this.lastRequestedIndex = index;
-        return undefined;
+        return result;
     }
 
 
