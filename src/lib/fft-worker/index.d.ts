@@ -3,12 +3,15 @@ declare type MessageWithType<T> = { type: T };
 declare type EmptyMessage = MessageWithType<'empty'>;
 
 // Messages to worker
+declare type InitializeMessage = MessageWithType<'init'> & {
+    size: number;
+    zoom: number;
+}
 declare type SingleArrayMessage = MessageWithType<'single'> & {
     index: number;
     splitChannels: Float32Array[];
-    zoom: number;
 }
-declare type MessageToWorker = | SingleArrayMessage | EmptyMessage;
+declare type MessageToWorker = InitializeMessage | SingleArrayMessage | EmptyMessage;
 
 
 // Messages to outside

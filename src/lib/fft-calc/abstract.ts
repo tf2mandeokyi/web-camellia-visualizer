@@ -77,19 +77,43 @@ export abstract class AbstractFourierWorkerCalculator extends AbstractFourierCal
 
     protected worker?: CustomFourierWorker;
     
+
     constructor(options: AFCConstructorArgs) {
         super(options);
         this.resetWorker();
     }
 
+    setAudioBuffer(buffer: AudioBuffer) {
+        super.setAudioBuffer(buffer);
+        this.sendInitMessage()
+    }
+
+
     protected resetWorker() {
         let oldWorker = this.worker;
         this.worker = new Worker(new URL('../fft-worker', import.meta.url)) as CustomFourierWorker;
         this.worker.onmessage = this.handleWorkerMessage.bind(this);
+        if(this.isAudioBufferSet()) {
+            this.sendInitMessage();
+        }
+
         if(oldWorker) {
             oldWorker.terminate();
         }
     }
+
+    
+    protected sendInitMessage() {
+        if(!this.audioBuffer)
+            throw new Error('Tried to send init message while no audio buffer is set')
+        
+        this.worker?.postMessage({
+            type: 'init',
+            size: this.bufferLengthPerFrame ?? 0,
+            zoom: this.transformZoom
+        });
+    }
+
 
     protected abstract handleWorkerMessage({ data }: MessageEvent<MessageToOutside>) : void;
 }

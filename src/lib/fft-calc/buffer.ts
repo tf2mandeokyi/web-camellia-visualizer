@@ -118,8 +118,7 @@ export class BufferedFourierCalculator extends AbstractFourierWorkerCalculator {
         this.worker?.postMessage({
             type: 'single',
             index: frameIndex,
-            splitChannels: this.getSplitChannelData(frameIndex),
-            zoom: this.transformZoom
+            splitChannels: this.getSplitChannelData(frameIndex)
         })
     }
 
