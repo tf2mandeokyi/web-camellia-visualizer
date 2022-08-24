@@ -1,4 +1,4 @@
-import { MessageToOutside } from '../fourier_worker';
+import { MessageToOutside } from '../fft-worker';
 import { AbstractFourierWorkerCalculator, FrameData, AFCConstructorArgs } from './abstract' 
 
 

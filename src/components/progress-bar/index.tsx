@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef } from 'react'
-import { FillStrokeColor } from './FillStrokeColor'
+import { FillStrokeColor } from '../../lib/color/FillStrokeColor'
 
-import "./ProgressBar.css"
+import "./index.css"
 
 
 export type ProgressBarClickHandler = (value: number) => void;

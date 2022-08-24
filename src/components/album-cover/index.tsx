@@ -1,6 +1,6 @@
 import React from "react";
 
-import './AlbumCover.css'
+import './index.css'
 
 
 export type AlbumCoverClickHandler = () => void;

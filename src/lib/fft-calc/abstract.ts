@@ -1,4 +1,4 @@
-import { CustomFourierWorker, MessageToOutside } from '../fourier_worker';
+import { CustomFourierWorker, MessageToOutside } from '../fft-worker';
 
 
 export type AFCConstructorArgs = {
@@ -84,7 +84,7 @@ export abstract class AbstractFourierWorkerCalculator extends AbstractFourierCal
 
     protected resetWorker() {
         let oldWorker = this.worker;
-        this.worker = new Worker(new URL('../fourier_worker', import.meta.url)) as CustomFourierWorker;
+        this.worker = new Worker(new URL('../fft-worker', import.meta.url)) as CustomFourierWorker;
         this.worker.onmessage = this.handleWorkerMessage.bind(this);
         if(oldWorker) {
             oldWorker.terminate();

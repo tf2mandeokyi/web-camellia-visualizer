@@ -1,6 +1,6 @@
 /// <reference path="index.d.ts"/>
 
-const { FastRealFourierTransform, blackmanHarris4, applyWindowFunction } = require('../../fft/index.ts');
+const { FastRealFourierTransform, blackmanHarris4, applyWindowFunction } = require('../fft/index.ts');
 
 
 /**

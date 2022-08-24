@@ -1,9 +1,9 @@
 import React from 'react';
-import { FillStrokeColor } from '../FillStrokeColor'
+import { FillStrokeColor } from '../../lib/color/FillStrokeColor'
 import BarSpectrum from './BarSpectrum';
 import CurveSpectrum from './CurveSpectrum';
 
-import './AudioSpectrum.css'
+import './index.css'
 
 
 export interface AudioSpectrumChildProps<ColorType> {

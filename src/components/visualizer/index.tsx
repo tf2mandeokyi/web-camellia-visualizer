@@ -1,14 +1,16 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { FillStrokeColor, mergeColor } from './FillStrokeColor';
-import { AudioPlayer } from './audio/AudioPlayer';
-import ScheduledRepeater from './repeater/ScheduledRepeater';
-import Background from './image/Background'
-import AudioSpectrum from './spectrum/AudioSpectrum';
-import AlbumCover, { AlbumCoverClickHandler } from './image/AlbumCover'
-import ProgressBar, { ProgressBarClickHandler } from './ProgressBar';
 
-import './CamelliaVisualizer.css'
-import * as FourierWorkerManager from './fourier_calc';
+import { FillStrokeColor, mergeColor } from '../../lib/color/FillStrokeColor';
+import { AudioPlayer } from '../../lib/audio/AudioPlayer';
+import ScheduledRepeater from '../../lib/repeater/ScheduledRepeater';
+import * as FourierCalculator from '../../lib/fft-calc';
+
+import AlbumCover, { AlbumCoverClickHandler } from '../album-cover'
+import ProgressBar, { ProgressBarClickHandler } from '../progress-bar';
+import Background from '../background'
+import AudioSpectrum from '../spectrum';
+
+import './index.css'
 
 
 const emptyArrayOnDisplay = new Float32Array([0, 0]);
@@ -51,7 +53,7 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
 
 
     const playerRef = useRef<AudioPlayer>();
-    const workerHandlerRef = useRef<FourierWorkerManager.AbstractFourierCalculator>();
+    const workerHandlerRef = useRef<FourierCalculator.AbstractFourierCalculator>();
     const readingStateRef = useRef<boolean>(false);
 
     const inputFileRef = useRef<HTMLInputElement>(null);
@@ -199,7 +201,7 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
     const setupWorkerHandler = useCallback((forced: boolean = false) => {
         if(forced || !workerHandlerRef.current) {
             // TODO: Set method type customizable
-            workerHandlerRef.current = FourierWorkerManager.fromMethod('buffer' /* 'real-time' */, {
+            workerHandlerRef.current = FourierCalculator.fromMethod('buffer' /* 'real-time' */, {
                 cacheBufferDuration: 5, 
                 framerate: props.framerate,
                 customSampleRate: 2048,

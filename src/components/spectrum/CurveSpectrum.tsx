@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
-import { FillStrokeColor } from '../FillStrokeColor';
-import { AudioSpectrumChildProps } from './AudioSpectrum';
+import { FillStrokeColor } from '../../lib/color/FillStrokeColor';
+import { AudioSpectrumChildProps } from './';
 
 
 function getMagnitude(y0: number, ay: number, y1: number) : number {

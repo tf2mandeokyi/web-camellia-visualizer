@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from "react";
-import { AudioSpectrumChildProps } from './AudioSpectrum';
-import { FillStrokeColor } from "../FillStrokeColor";
+import { AudioSpectrumChildProps } from './';
+import { FillStrokeColor } from "../../lib/color/FillStrokeColor";
 
 
 interface CurveSpectrumProps extends AudioSpectrumChildProps<Omit<FillStrokeColor, "fill">> {

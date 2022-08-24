@@ -1,6 +1,6 @@
-import { AbstractFourierCalculator, AFCConstructorArgs, FrameData } from './abstract'
+import { AbstractFourierCalculator, FrameData } from './abstract'
+import { FastRealFourierTransform, blackmanHarris4, applyWindowFunction } from '../fft/index.ts';
 
-import { FastRealFourierTransform, blackmanHarris4, applyWindowFunction } from '../../fft/index.ts';
 
 export class RealTimeFourierCalculator extends AbstractFourierCalculator {
 

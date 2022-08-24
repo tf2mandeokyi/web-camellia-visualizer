@@ -2,7 +2,7 @@ import React, { useRef } from 'react';
 // import { Canvas, MeshProps, useFrame, useThree } from '@react-three/fiber';
 // import * as THREE from 'three';
 
-import './Background.css'
+import './index.css'
 
 
 interface BackgroundProps {

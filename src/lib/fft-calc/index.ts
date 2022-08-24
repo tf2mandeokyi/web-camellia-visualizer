@@ -2,13 +2,14 @@ import { AbstractFourierCalculator, AFCConstructorArgs } from "./abstract";
 import { BFCConstructorArgs, BufferedFourierCalculator } from "./buffer";
 import { RealTimeFourierCalculator } from './real_time';
 
-export { AbstractFourierCalculator } from './abstract';
-
 
 interface MethodArgsType {
     "buffer": BFCConstructorArgs;
     "real-time": AFCConstructorArgs;
 }
+
+
+export { AbstractFourierCalculator } from './abstract';
 
 export function fromMethod<T extends keyof MethodArgsType>(
     methodType: T, args: MethodArgsType[T]
