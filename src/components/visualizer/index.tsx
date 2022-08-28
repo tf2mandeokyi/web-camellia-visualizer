@@ -230,6 +230,7 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
                 if(value > 1) value = 1;
                 if(value < 0) value = 0;
                 
+                playerRef.current?.setVolume(value);
                 prev = value + '';
             }
 
