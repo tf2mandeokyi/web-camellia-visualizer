@@ -59,6 +59,7 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
     const inputFileRef = useRef<HTMLInputElement>(null);
     const repeatCheckboxRef = useRef<HTMLInputElement>(null);
     const imageSrcInputRef = useRef<HTMLInputElement>(null);
+    const volumeSliderRef = useRef<HTMLInputElement>(null);
 
 
     const start = useCallback((options: { seconds?: number, forced?: boolean } = {}) => {
@@ -161,6 +162,14 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
     }
 
 
+    const onVolumeSliderChange : React.ChangeEventHandler<HTMLInputElement> = (event) => {
+        let { value } = event.target;
+
+        playerRef.current?.setVolume(parseFloat(value));
+        localStorage.setItem('volume', value);
+    } 
+
+
     const onProgressBarUpdate : ProgressBarClickHandler = (value) => {
         if(playerRef.current?.isAudioInserted()) {
             playerRef.current.setTime(value, true);
@@ -211,6 +220,24 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
     }, [ props ]);
 
 
+    const getPreviousVolume = useCallback(() => {
+        if(volumeSliderRef.current) {
+            let prev = localStorage.getItem('volume');
+            if(prev) {
+                let value = parseFloat(prev);
+
+                if(isNaN(value)) value = 1;
+                if(value > 1) value = 1;
+                if(value < 0) value = 0;
+                
+                prev = value + '';
+            }
+
+            volumeSliderRef.current.value = prev ?? '1';
+        }
+    }, []);
+
+
     useEffect(() => {
         window.addEventListener('resize', handleResize);
         window.addEventListener('keypress', handleKeyPress);
@@ -223,12 +250,13 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
             });
         }
         setupWorkerHandler();
+        getPreviousVolume();
 
         return () => {
             window.removeEventListener('resize', handleResize);
             window.removeEventListener('keypress', handleKeyPress);
         }
-    }, [ handleKeyPress, setupWorkerHandler, start, loop, handleResize ]);
+    }, [ handleKeyPress, setupWorkerHandler, start, loop, handleResize, getPreviousVolume ]);
 
 
     useEffect(() => {
@@ -304,7 +332,16 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
                 type="text"
                 onChange={ onUrlUpdate }
                 placeholder="Image url..."
-            /><br/>
+            />
+            <br/>
+            <input
+                type="range"
+                ref={ volumeSliderRef }
+                onChange={ onVolumeSliderChange }
+                min={ 0 }
+                max={ 1 }
+                step={ 0.001 }
+            />
         </div>
     </>);
 }

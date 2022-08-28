@@ -1,12 +1,14 @@
 export class AudioPlayer {
 
     private context: AudioContext;
+    private gainNode: GainNode;
+
+    private buffer?: AudioBuffer;
+    private bufferSource?: AudioBufferSourceNode;
 
     albumCoverUri?: string;
     onDonePlaying?: () => void;
 
-    private buffer?: AudioBuffer;
-    private bufferSource?: AudioBufferSourceNode;
     private playing: boolean;
     /** In seconds. */
     private startTime: number;
@@ -19,6 +21,9 @@ export class AudioPlayer {
         this.playing = false;
         this.startTime = this.getNow();
         this.time = 0;
+
+        this.gainNode = this.context.createGain();
+        this.gainNode.connect(this.context.destination);
     }
 
 
@@ -69,7 +74,7 @@ export class AudioPlayer {
 
         const bufferSource = this.context.createBufferSource();
         bufferSource.buffer = this.buffer;
-        bufferSource.connect(this.context.destination);
+        bufferSource.connect(this.gainNode);
 
         let now = this.getNow();
         if(seconds) {
@@ -119,6 +124,14 @@ export class AudioPlayer {
     getDuration() {
         if(!this.buffer) throw new Error('Audio not inserted');
         return this.buffer.duration;
+    }
+
+
+    /**
+     * @param volume Ranges from 0 to 1
+     */
+    setVolume(volume: number) {
+        this.gainNode.gain.value = volume;
     }
 
 
