@@ -335,6 +335,7 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
             />
             <br/>
             <input
+                className={ showInputs ? '' : 'hidden' }
                 type="range"
                 ref={ volumeSliderRef }
                 onChange={ onVolumeSliderChange }
