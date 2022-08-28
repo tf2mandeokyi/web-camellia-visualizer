@@ -210,8 +210,8 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
     const setupWorkerHandler = useCallback((forced: boolean = false) => {
         if(forced || !workerHandlerRef.current) {
             // TODO: Set method type customizable
-            workerHandlerRef.current = FourierCalculator.fromMethod('buffer' /* 'real-time' */, {
-                cacheBufferDuration: 5, 
+            workerHandlerRef.current = FourierCalculator.fromMethod(/* 'buffer' */ 'real-time', {
+                // cacheBufferDuration: 5, 
                 framerate: props.framerate,
                 customSampleRate: 2048,
                 transformZoom: 4
