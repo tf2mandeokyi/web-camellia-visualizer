@@ -166,10 +166,11 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
 
 
     const onVolumeSliderChange : React.ChangeEventHandler<HTMLInputElement> = (event) => {
-        let { value } = event.target;
+        let str = event.target.value;
+        let value = parseFloat(str);
 
-        playerRef.current?.setVolume(parseFloat(value));
-        localStorage.setItem('volume', value);
+        playerRef.current?.setVolume(Math.pow(2, value) - 1);
+        localStorage.setItem('volume', str);
     } 
 
 
