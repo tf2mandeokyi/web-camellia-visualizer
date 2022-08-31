@@ -2,7 +2,6 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 
 import { FillStrokeColor, mergeColor } from '../../lib/color/FillStrokeColor';
 import { AudioPlayer } from '../../lib/audio/AudioPlayer';
-import ScheduledRepeater from '../../lib/repeater/ScheduledRepeater';
 import * as FourierCalculator from '../../lib/fft-calc';
 
 import AlbumCover, { AlbumCoverClickHandler } from '../album-cover'
@@ -55,6 +54,7 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
     const playerRef = useRef<AudioPlayer>();
     const workerHandlerRef = useRef<FourierCalculator.AbstractFourierCalculator>();
     const readingStateRef = useRef<boolean>(false);
+    const loopIdRef = useRef<number>();
 
     const inputFileRef = useRef<HTMLInputElement>(null);
     const repeatCheckboxRef = useRef<HTMLInputElement>(null);
@@ -91,14 +91,15 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
     }, []);
 
 
-    const updateSpectrum = useCallback(async () => {
+    const updateSpectrum = useCallback(() => {
         if(!workerHandlerRef.current) return;
 
         if(workerHandlerRef.current.isAudioBufferSet()) {
             let _currentFrame = currentFrame;
 
-            // Change smoothly if no "frame jumps"
             let frame = Math.floor((playerRef.current?.getTime() ?? 0) * props.framerate);
+            
+            // Change smoothly if not "frame jump"
             if(_currentFrame < frame) {
                 _currentFrame = frame - _currentFrame > 5 ? frame : _currentFrame + 1;
             }
@@ -106,7 +107,7 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
                 _currentFrame = frame;
             }
 
-            let frameData = await workerHandlerRef.current.getFrameData(_currentFrame);
+            let frameData = workerHandlerRef.current.getFrameData(_currentFrame);
             if(frameData) {
                 if(_currentFrame !== currentFrame) setCurrentFrame(_currentFrame);
 
@@ -123,6 +124,8 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
     const loop = useCallback(() => {
         updateProcessString();
         updateSpectrum();
+
+        loopIdRef.current = requestAnimationFrame(loop);
     }, [ updateProcessString, updateSpectrum ])
 
 
@@ -220,6 +223,17 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
     }, [ props ]);
 
 
+    const setupAudioPlayer = useCallback(() => {
+        if(playerRef.current) return;
+        
+        playerRef.current = new AudioPlayer().setDonePlayingHandler(() => {
+            if(repeatCheckboxRef.current?.checked) {
+                start({ seconds: 0, forced: true });
+            }
+        });
+    }, [ start ]);
+
+
     const getPreviousVolume = useCallback(() => {
         if(volumeSliderRef.current) {
             let prev = localStorage.getItem('volume');
@@ -243,21 +257,18 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
         window.addEventListener('resize', handleResize);
         window.addEventListener('keypress', handleKeyPress);
 
-        if(!playerRef.current) {
-            playerRef.current = new AudioPlayer().setDonePlayingHandler(() => {
-                if(repeatCheckboxRef.current?.checked) {
-                    start({ seconds: 0, forced: true });
-                }
-            });
-        }
         setupWorkerHandler();
+        setupAudioPlayer();
         getPreviousVolume();
+        loop();
 
         return () => {
             window.removeEventListener('resize', handleResize);
             window.removeEventListener('keypress', handleKeyPress);
+
+            if(loopIdRef.current) cancelAnimationFrame(loopIdRef.current);
         }
-    }, [ handleKeyPress, setupWorkerHandler, start, loop, handleResize, getPreviousVolume ]);
+    }, [ handleKeyPress, setupWorkerHandler, setupAudioPlayer, loop, handleResize, getPreviousVolume ]);
 
 
     useEffect(() => {
@@ -267,10 +278,6 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
 
     return (<>
         <div className="camellia-visualzer">
-            <ScheduledRepeater
-                callback={ loop }
-                framerate={ props.framerate }
-            />
             <Background
                 src={ imageSrc }
                 magnify={ Math.min(1 + 0.04 * volumeOnDisplay * volumeOnDisplay, 10) + 0.05 }
