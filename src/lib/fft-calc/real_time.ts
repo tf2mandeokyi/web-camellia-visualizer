@@ -17,10 +17,10 @@ export class RealTimeFourierCalculator extends AbstractFourierCalculator {
             throw new Error('Tried to get frame data while no audio buffer is set');
 
         let splitChannels = this.getSplitChannelData(index);
-        let { channelsCombined, volume } = applyWindowFunction(splitChannels, blackmanHarris4);
+        let channelsCombined = applyWindowFunction(splitChannels, blackmanHarris4);
         let transformArray = this.fourierObject.realTransform(channelsCombined, 'radix-4');
 
-        return { transformArray, volume };
+        return { transformArray, volume: Math.max(...transformArray) };
     }
 
 }

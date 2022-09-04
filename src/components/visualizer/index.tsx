@@ -52,7 +52,7 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
 
 
     const playerRef = useRef<AudioPlayer>();
-    const workerHandlerRef = useRef<FourierCalculator.AbstractFourierCalculator>();
+    const calculatorRef = useRef<FourierCalculator.AbstractFourierCalculator>();
     const readingStateRef = useRef<boolean>(false);
     const loopIdRef = useRef<number>();
 
@@ -65,7 +65,7 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
     const start = useCallback((options: { seconds?: number, forced?: boolean } = {}) => {
         let { seconds, forced } = options;
 
-        if(!workerHandlerRef.current?.isAudioBufferSet()) return;
+        if(!calculatorRef.current?.isAudioBufferSet()) return;
 
         let player = playerRef.current;
         if(!player?.isAudioInserted()) return;
@@ -92,32 +92,28 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
 
 
     const updateSpectrum = useCallback(() => {
-        if(!workerHandlerRef.current) return;
+        if(!calculatorRef.current?.isAudioBufferSet()) return;
 
-        if(workerHandlerRef.current.isAudioBufferSet()) {
-            let _currentFrame = currentFrame;
-
-            let frame = Math.floor((playerRef.current?.getTime() ?? 0) * props.framerate);
-            
-            // Change smoothly if not "frame jump"
-            if(_currentFrame < frame) {
-                _currentFrame = frame - _currentFrame > 5 ? frame : _currentFrame + 1;
-            }
-            else if(_currentFrame > frame) {
-                _currentFrame = frame;
-            }
-
-            let frameData = workerHandlerRef.current.getFrameData(_currentFrame);
-            if(frameData) {
-                if(_currentFrame !== currentFrame) setCurrentFrame(_currentFrame);
-
-                let { transformArray, volume } = frameData;
-                setArrayOnDisplay(transformArray);
-                setVolumeOnDisplay(volume);
-                return;
-            }
-
+        let _currentFrame = currentFrame;
+        let frame = Math.floor((playerRef.current?.getTime() ?? 0) * props.framerate);
+        
+        // Change smoothly if not "frame jump"
+        if(_currentFrame < frame) {
+            _currentFrame = frame - _currentFrame > 5 ? frame : _currentFrame + 1;
         }
+        else if(_currentFrame > frame) {
+            _currentFrame = frame;
+        }
+
+        if(_currentFrame === currentFrame) return;
+        setCurrentFrame(_currentFrame);
+
+        let frameData = calculatorRef.current.getFrameData(_currentFrame);
+        if(!frameData) return;
+
+        let { transformArray, volume } = frameData;
+        setArrayOnDisplay(transformArray);
+        setVolumeOnDisplay(volume);
     }, [ props, currentFrame ]);
     
 
@@ -135,8 +131,8 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
             let player = playerRef.current;
             if(!player) return;
 
-            let workerHandler = workerHandlerRef.current;
-            if(!workerHandler) return;
+            let calculator = calculatorRef.current;
+            if(!calculator) return;
 
             const inputFile = inputFileRef.current?.files?.[0];
             if(!inputFile) return;
@@ -145,7 +141,7 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
             if(player.albumCoverUri) {
                 setImageSrc(player.albumCoverUri);
             }
-            workerHandler.setAudioBuffer(decoded);
+            calculator.setAudioBuffer(decoded);
             
             setCurrentFrame(0);
             setArrayOnDisplay(emptyArrayOnDisplay);
@@ -211,10 +207,10 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
     }, [ triggerStartStop ]);
 
 
-    const setupWorkerHandler = useCallback((forced: boolean = false) => {
-        if(forced || !workerHandlerRef.current) {
+    const setupCalculator = useCallback((forced: boolean = false) => {
+        if(forced || !calculatorRef.current) {
             // TODO: Set method type customizable
-            workerHandlerRef.current = FourierCalculator.fromMethod(/* 'buffer' */ 'real-time', {
+            calculatorRef.current = FourierCalculator.fromMethod(/* 'buffer' */ 'real-time', {
                 // cacheBufferDuration: 5, 
                 framerate: props.framerate,
                 customSampleRate: 2048,
@@ -258,7 +254,7 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
         window.addEventListener('resize', handleResize);
         window.addEventListener('keypress', handleKeyPress);
 
-        setupWorkerHandler();
+        setupCalculator();
         setupAudioPlayer();
         getPreviousVolume();
         loop();
@@ -269,7 +265,7 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
 
             if(loopIdRef.current) cancelAnimationFrame(loopIdRef.current);
         }
-    }, [ handleKeyPress, setupWorkerHandler, setupAudioPlayer, loop, handleResize, getPreviousVolume ]);
+    }, [ handleKeyPress, setupCalculator, setupAudioPlayer, loop, handleResize, getPreviousVolume ]);
 
 
     useEffect(() => {
@@ -281,7 +277,7 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
         <div className="camellia-visualzer">
             <Background
                 src={ imageSrc }
-                magnify={ Math.min(1 + 0.04 * volumeOnDisplay * volumeOnDisplay, 10) + 0.05 }
+                magnify={ Math.min(1 + 0.001 * volumeOnDisplay, 10) + 0.05 }
             />
             <AlbumCover
                 right={ windowSize.width / 2 + getRelative(86) }
@@ -289,7 +285,7 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
                 width={ getRelative(648) }
                 height={ getRelative(648) }
                 src={ imageSrc }
-                onClick={ workerHandlerRef.current?.isAudioBufferSet() ? triggerStartStop : undefined }
+                onClick={ calculatorRef.current?.isAudioBufferSet() ? triggerStartStop : undefined }
             />
             <AudioSpectrum 
                 arrayOnDisplay={ arrayOnDisplay }

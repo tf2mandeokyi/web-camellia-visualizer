@@ -30,9 +30,9 @@ onmessage = function(event) {
         
         let { index, splitChannels } = message;
 
-        let { channelsCombined, volume } = applyWindowFunction(splitChannels, blackmanHarris4);
+        let channelsCombined = applyWindowFunction(splitChannels, blackmanHarris4);
         let transformResult = fourierObject.realTransform(channelsCombined, 'radix-4');
 
-        postmessage({ type: 'single', index, transformResult, volume });
+        postmessage({ type: 'single', index, transformResult, volume: Math.max(...transformResult) });
     }
 }

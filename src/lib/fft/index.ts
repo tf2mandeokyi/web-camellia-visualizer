@@ -7,14 +7,10 @@ export function blackmanHarris4(N: number, n: number, [ a0, a1, a2, a3 ] = DEFAU
 
 type WindowFunction = (N: number, n: number) => number;
 
-export function applyWindowFunction(channels: Float32Array[], wfunc: WindowFunction) : {
-    channelsCombined: Float32Array,
-    volume: number
-} {
+export function applyWindowFunction(channels: Float32Array[], wfunc: WindowFunction) : Float32Array {
     let length = channels[0].length;
 
     const channelsCombined = new Float32Array(length);
-    let min = +Infinity, max = -Infinity;
 
     for(let j = 0; j < length; ++j) {
         let value = 0;
@@ -25,11 +21,9 @@ export function applyWindowFunction(channels: Float32Array[], wfunc: WindowFunct
         value /= channels.length;
         
         channelsCombined[j] = value * wfunc(length, j);
-        if(min > value) min = value;
-        if(max < value) max = value;
     }
 
-    return { channelsCombined, volume: max - min }
+    return channelsCombined;
 }
 
 
