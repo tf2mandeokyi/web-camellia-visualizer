@@ -9,7 +9,7 @@ export type ProgressBarClickHandler = (value: number) => void;
 
 interface ProgressBarProps {
     color: FillStrokeColor
-    left: number;
+    centerX: number;
     y: number;
     width: number;
     current: number;
@@ -25,7 +25,7 @@ const ProgressBar : React.FC<ProgressBarProps> = (props) => {
 
 
     const mouseUpdate = useCallback((event: MouseEvent | React.MouseEvent) => {
-        let relX = event.clientX - props.left;
+        let relX = event.clientX - props.centerX + props.width / 2;
         let t = relX / props.width;
         if(t < 0) t = 0;
         if(t > 1) t = 1;
@@ -50,7 +50,7 @@ const ProgressBar : React.FC<ProgressBarProps> = (props) => {
         let { ballRadius, color } = props;
 
         const canvas = canvasRef.current;
-        canvas.style.left = (props.left - ballRadius) + 'px';
+        canvas.style.left = (props.centerX - props.width / 2 - ballRadius) + 'px';
         canvas.style.top = (props.y - ballRadius) + 'px';
         canvas.width = props.width + 2 * ballRadius;
         canvas.height = ballRadius * 2 + 1;

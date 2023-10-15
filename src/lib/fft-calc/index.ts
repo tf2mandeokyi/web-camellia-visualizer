@@ -1,26 +1,78 @@
-import { AbstractFourierCalculator, AFCConstructorArgs } from "./abstract";
-import { BFCConstructorArgs, BufferedFourierCalculator } from "./buffer";
-import { RealTimeFourierCalculator } from './real_time';
+import { FastRealFourierTransform, blackmanHarris4, combineWindowedChannels } from "../fft";
 
-
-interface MethodArgsType {
-    "buffer": BFCConstructorArgs;
-    "real-time": AFCConstructorArgs;
+export interface FrameData {
+    transformArray: Float32Array;
+    volume: number;
 }
 
 
-export { AbstractFourierCalculator } from './abstract';
+type FCConstructorArgs = {
+    transformZoom?: number;
+    sampleRatePerSecond?: number;
+}
 
-export function fromMethod<T extends keyof MethodArgsType>(
-    methodType: T, args: MethodArgsType[T]
-) : AbstractFourierCalculator {
-    if(methodType === 'buffer') {
-        return new BufferedFourierCalculator(args as BFCConstructorArgs);
+
+export class FourierCalculator {
+    
+    private transformZoom: number;
+    private sampleRatePerSecond?: number;
+
+    private audioBuffer?: AudioBuffer;
+    /** Per second */
+    private sampleRate?: number;
+    private fourierObject?: FastRealFourierTransform;
+
+
+    constructor({ transformZoom = 1, sampleRatePerSecond }: FCConstructorArgs) {
+        this.transformZoom = transformZoom;
+        this.sampleRatePerSecond = sampleRatePerSecond;
     }
-    else if(methodType === 'real-time') {
-        return new RealTimeFourierCalculator(args);
+
+
+    setAudioBuffer(buffer: AudioBuffer) {
+        this.audioBuffer = buffer;
+
+        let { sampleRate } = buffer;
+        this.sampleRate = sampleRate;
+        this.fourierObject = new FastRealFourierTransform(this.sampleRatePerSecond ?? 0, this.transformZoom);
     }
-    else {
-        throw new Error(`No worker manager found with method type name ${methodType}`)
+
+
+    isAudioBufferSet() : boolean {
+        return this.audioBuffer !== undefined;
+    }
+
+
+    getRawData(timeMs: number) : Float32Array {
+        if(!this.isAudioBufferSet())
+            throw new Error('Tried to get frame data while no audio buffer is set');
+        
+        let splitChannels = this.getSplitChannelData(timeMs);
+        return combineWindowedChannels(splitChannels, blackmanHarris4);
+    }
+
+
+    calculateData(rawData: Float32Array) : FrameData {
+        if(!this.fourierObject)
+            throw new Error('Tried to get frame data while no audio buffer is set');
+
+        let transformArray = this.fourierObject.realTransform(rawData, 'radix-4');
+        return { transformArray, volume: Math.max(...transformArray) };
+    }
+
+
+    protected getSplitChannelData(timeMs: number) : Float32Array[] {
+        if(!this.audioBuffer)
+            throw new Error('Tried to split channel data while no audio buffer is set');
+
+        let buffer = this.audioBuffer;
+        let { numberOfChannels } = buffer;
+
+        let lengthPerFrame = (this.sampleRatePerSecond ?? 0);
+        let bufferStartIndex = Math.floor(timeMs / 1000 * (this.sampleRate ?? 0)) - lengthPerFrame / 2;
+
+        return new Array<number>(numberOfChannels).fill(0)
+            .map((_, i) => new Float32Array(lengthPerFrame)
+                .map((__, j) => buffer.getChannelData(i)[bufferStartIndex + j] ?? 0));
     }
 }

@@ -1,0 +1,31 @@
+.music-info-box {
+    position: absolute;
+    background-color: rgba(0, 0, 0, 0.35);
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: space-evenly;
+    text-align: center;
+    color: white;
+}
+
+.music-info-box div, .music-info-box span {
+    text-align: center;
+    display: flex;
+    flex-flow: row nowrap;
+    justify-content: space-evenly;
+    gap: 10px;
+}
+
+.music-info-box .title {
+    font-size: 2.5em;
+    font-weight: 600;
+}
+
+.music-info-box .artist {
+    font-size: 1em;
+}
+
+.music-info-box .album {
+    font-size: 1em;
+}

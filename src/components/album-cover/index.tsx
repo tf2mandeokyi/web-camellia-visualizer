@@ -7,8 +7,8 @@ export type AlbumCoverClickHandler = () => void;
 
 
 interface AlbumCoverProp {
-    right: number;
-    bottom: number;
+    centerX: number;
+    centerY: number;
     width: number;
     height: number;
     src?: string;
@@ -22,8 +22,8 @@ const AlbumCover : React.FC<AlbumCoverProp> = (props) => {
             width={ props.width } 
             height={ props.height }
             style={{
-                right: props.right,
-                bottom: props.bottom,
+                left: props.centerX - props.width / 2,
+                top: props.centerY - props.height / 2,
                 width: props.width,
                 height: props.height,
                 cursor: props.onClick ? 'pointer' : 'inherit'
@@ -36,8 +36,8 @@ const AlbumCover : React.FC<AlbumCoverProp> = (props) => {
         <div
             className="no-album-cover"
             style={{
-                right: props.right,
-                bottom: props.bottom,
+                left: props.centerX - props.width / 2,
+                top: props.centerY - props.height / 2,
                 width: props.width,
                 height: props.height,
                 cursor: props.onClick ? 'pointer' : 'inherit'

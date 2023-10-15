@@ -1,3 +1,4 @@
 .progress-bar {
     position: absolute;
+    cursor: pointer;
 }

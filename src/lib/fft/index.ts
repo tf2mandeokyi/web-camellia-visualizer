@@ -7,7 +7,7 @@ export function blackmanHarris4(N: number, n: number, [ a0, a1, a2, a3 ] = DEFAU
 
 type WindowFunction = (N: number, n: number) => number;
 
-export function applyWindowFunction(channels: Float32Array[], wfunc: WindowFunction) : Float32Array {
+export function combineWindowedChannels(channels: Float32Array[], wfunc: WindowFunction) : Float32Array {
     let length = channels[0].length;
 
     const channelsCombined = new Float32Array(length);
@@ -148,7 +148,7 @@ export class FastRealFourierTransform {
             let x2 = X[start + 2*step];
             let x3 = X[start + 3*step];
             
-            let D = new Array<number>(4 * r);
+            let D = new Array<number>(8 * r);
             for(let k = 0; k < r; ++k) {
 
                 let [ W1kr, W1ki ] = this.expTable[    k * this.N / 4];

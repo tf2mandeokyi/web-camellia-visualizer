@@ -1,7 +1,7 @@
 import React from 'react';
 import { FillStrokeColor } from '../../lib/color/FillStrokeColor'
-import BarSpectrum from './BarSpectrum';
-import CurveSpectrum from './CurveSpectrum';
+import BarGraph from './BarGraph';
+import CurvedGraph from './CurvedGraph';
 
 import './index.css'
 
@@ -9,8 +9,8 @@ import './index.css'
 export interface AudioSpectrumChildProps<ColorType> {
     arrayOnDisplay: Float32Array;
     color: ColorType;
-    waveScale: number;
-    left: number;
+    graphScale: number;
+    centerX: number;
     bottom: number;
     width: number;
     range: [number, number];
@@ -24,7 +24,7 @@ interface AudioSpectrumProps {
     ballCount: number;
     ballRadius: number;
     waveScale: number;
-    left: number;
+    centerX: number;
     bottom: number;
     width: number;
     range: [number, number];
@@ -35,23 +35,23 @@ const AudioSpectrum : React.FC<AudioSpectrumProps> = (props) => {
 
     const { curveColor, barColor, waveScale, range, ballCount, ballRadius, ...others } = props;
 
-    return (<>
-        <BarSpectrum 
+    return (<div>
+        <BarGraph
             color={ barColor }
             range={[ range[0], range[0] + (range[1] - range[0]) * 19 / 21 ]}
-            ballRadius={ props.ballRadius }
-            ballCount={ props.ballCount }
-            waveScale={ waveScale }
+            ballRadius={ ballRadius }
+            ballCount={ ballCount }
+            graphScale={ waveScale }
             { ...others }
         />
-        <CurveSpectrum 
+        <CurvedGraph
             color={ curveColor } 
             range={ range }
             mode="continuous"
-            waveScale={ waveScale * 3 / 5 } 
+            graphScale={ waveScale * 3 / 5 } 
             { ...others }
         />
-    </>)
+    </div>)
 }
 
 export default AudioSpectrum;

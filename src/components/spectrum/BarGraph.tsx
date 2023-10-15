@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from "react";
-import { AudioSpectrumChildProps } from './';
+import { AudioSpectrumChildProps } from '.';
 import { FillStrokeColor } from "../../lib/color/FillStrokeColor";
 
 
@@ -9,12 +9,12 @@ interface CurveSpectrumProps extends AudioSpectrumChildProps<Omit<FillStrokeColo
 }
 
 
-function interpolate(y0: number, y1: number, t: number) {
+function lerp(y0: number, y1: number, t: number) {
     return y0 + t * (y1 - y0);
 }
 
 
-const BarSpectrum : React.FC<CurveSpectrumProps> = (props) => {
+const BarGraph : React.FC<CurveSpectrumProps> = (props) => {
 
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -24,7 +24,7 @@ const BarSpectrum : React.FC<CurveSpectrumProps> = (props) => {
 
         const canvas = canvasRef.current;
 
-        canvas.style.left = (props.left - ballRadius) + 'px';
+        canvas.style.left = (props.centerX - props.width / 2 - ballRadius) + 'px';
         canvas.style.bottom = (window.innerHeight - props.bottom - 2 * ballRadius) + 'px';
         canvas.width = props.width + 2 * ballRadius;
         canvas.height = props.bottom + 2 * ballRadius;
@@ -36,7 +36,7 @@ const BarSpectrum : React.FC<CurveSpectrumProps> = (props) => {
         ctx.fillStyle = props.color.stroke;
         ctx.lineWidth = props.color.lineWidth;
 
-        const { arrayOnDisplay, waveScale = 1, range } = props;
+        const { arrayOnDisplay, graphScale: waveScale = 1, range } = props;
         const ballArray = new Array(props.ballCount);
         let i, n = arrayOnDisplay.length, r = range[1] - range[0];
 
@@ -46,7 +46,7 @@ const BarSpectrum : React.FC<CurveSpectrumProps> = (props) => {
 
             let k_int = Math.floor(k);
             let k_dec = k - k_int;
-            let y = interpolate(arrayOnDisplay[k_int], arrayOnDisplay[k_int+1], k_dec);
+            let y = lerp(arrayOnDisplay[k_int], arrayOnDisplay[k_int+1], k_dec);
             y = y ?? 0;
             y = Number.isNaN(y) ? 0 : y;
             ballArray[i] = y;
@@ -75,4 +75,4 @@ const BarSpectrum : React.FC<CurveSpectrumProps> = (props) => {
     );
 }
 
-export default BarSpectrum;
+export default BarGraph;

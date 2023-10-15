@@ -1,3 +1,10 @@
+export interface AudioFileMetaData {
+    title?: string
+    artist?: string
+    album?: string
+    imageUri?: string
+}
+
 export class AudioPlayer {
 
     private context: AudioContext;
@@ -6,7 +13,7 @@ export class AudioPlayer {
     private buffer?: AudioBuffer;
     private bufferSource?: AudioBufferSourceNode;
 
-    albumCoverUri?: string;
+    audioMetadata?: AudioFileMetaData;
     onDonePlaying?: () => void;
 
     private playing: boolean;
@@ -35,7 +42,7 @@ export class AudioPlayer {
 
     async insertAudioFile(input: File) {
         try {
-            this.albumCoverUri = await this.extractAlbumCover(input);
+            this.audioMetadata = await this.extractAudioMetadata(input);
         } catch(_) {}
 
         const inputBuffer = await input.arrayBuffer();
@@ -160,19 +167,21 @@ export class AudioPlayer {
     }
 
 
-    async extractAlbumCover(file: File) : Promise<string | undefined> {
-        return new Promise<string | undefined>((res) => {
+    async extractAudioMetadata(file: File) : Promise<AudioFileMetaData | undefined> {
+        return new Promise<AudioFileMetaData | undefined>((res) => {
             window.jsmediatags.read(file, {
                 onSuccess: ({ tags }) => {
-                    let { picture } = tags;
-                    if(!picture) {
-                        res(undefined);
-                        return;
+                    let { title, artist, album, picture } = tags;
+
+                    let imageUri: string | undefined = undefined;
+                    if(picture) {
+                        let base64String = picture.data.map((c) => String.fromCharCode(c)).reduce((prev, cur) => prev + cur);
+                        imageUri = "data:" + picture.format + ";base64," + window.btoa(base64String);
                     }
     
-                    let base64String = picture.data.map((c) => String.fromCharCode(c)).reduce((prev, cur) => prev + cur);
-                    let imageUri = "data:" + picture.format + ";base64," + window.btoa(base64String);
-                    res(imageUri);
+                    let result: any = { title, artist, album, imageUri };
+                    Object.keys(result).forEach(key => result[key] === undefined ? delete result[key] : {});
+                    res(result)
                 },
                 onError: () => res(undefined)
             })

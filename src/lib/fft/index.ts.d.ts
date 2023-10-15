@@ -1,5 +1,5 @@
 export { 
     FastRealFourierTransform,
     blackmanHarris4,
-    applyWindowFunction
+    combineWindowedChannels as applyWindowFunction
 } from './index'

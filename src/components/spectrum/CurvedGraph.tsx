@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { FillStrokeColor } from '../../lib/color/FillStrokeColor';
-import { AudioSpectrumChildProps } from './';
+import { AudioSpectrumChildProps } from '.';
 
 
 function getMagnitude(y0: number, ay: number, y1: number) : number {
@@ -61,7 +61,7 @@ interface CurveSpectrumProps extends AudioSpectrumChildProps<FillStrokeColor> {
 }
 
 
-const CurveSpectrum : React.FC<CurveSpectrumProps> = (props) => {
+const CurvedGraph : React.FC<CurveSpectrumProps> = (props) => {
 
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -69,7 +69,7 @@ const CurveSpectrum : React.FC<CurveSpectrumProps> = (props) => {
         if(!canvasRef.current) return;
 
         const canvas = canvasRef.current;
-        canvas.style.left = props.left + 'px';
+        canvas.style.left = (props.centerX - props.width / 2) + 'px';
         canvas.style.bottom = (window.innerHeight - props.bottom) + 'px';
         canvas.width = props.width;
         canvas.height = props.bottom;
@@ -79,7 +79,7 @@ const CurveSpectrum : React.FC<CurveSpectrumProps> = (props) => {
 
         ctx.fillStyle = 'white';
 
-        const { arrayOnDisplay, waveScale = 1, range } = props;
+        const { arrayOnDisplay, graphScale: waveScale = 1, range } = props;
         const n = arrayOnDisplay.length, r = range[1] - range[0];
         const wr = canvas.width / r, dx = wr / (n - 1);
 
@@ -130,4 +130,4 @@ const CurveSpectrum : React.FC<CurveSpectrumProps> = (props) => {
     );
 }
 
-export default CurveSpectrum;
+export default CurvedGraph;

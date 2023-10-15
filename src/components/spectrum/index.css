@@ -1,11 +1,14 @@
 .audio-spectrum {
     position: absolute;
+    pointer-events: none;
 }
 
 .curve-spectrum {
     position: absolute;
+    pointer-events: none;
 }
 
 .bar-spectrum {
     position: absolute;
+    pointer-events: none;
 }

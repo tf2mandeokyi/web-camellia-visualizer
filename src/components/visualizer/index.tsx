@@ -1,8 +1,8 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 
 import { FillStrokeColor, mergeColor } from '../../lib/color/FillStrokeColor';
-import { AudioPlayer } from '../../lib/audio/AudioPlayer';
-import * as FourierCalculator from '../../lib/fft-calc';
+import { AudioFileMetaData, AudioPlayer } from '../../lib/audio/AudioPlayer';
+import { FourierCalculator } from '../../lib/fft-calc';
 
 import AlbumCover, { AlbumCoverClickHandler } from '../album-cover'
 import ProgressBar, { ProgressBarClickHandler } from '../progress-bar';
@@ -10,6 +10,8 @@ import Background from '../background'
 import AudioSpectrum from '../spectrum';
 
 import './index.css'
+import MusicInfoBox from '../music-info-box';
+import BarGraph from '../spectrum/BarGraph';
 
 
 const emptyArrayOnDisplay = new Float32Array([0, 0]);
@@ -18,9 +20,15 @@ const emptyArrayOnDisplay = new Float32Array([0, 0]);
 interface WidthHeight {
     width: number; height: number;
 }
+const WINDOW_RATIO: WidthHeight = { width: 16, height: 9 } // Set your screen ratio here
 
+function getContentHeight(windowSize: WidthHeight, ratio: WidthHeight = WINDOW_RATIO) {
+    let widthDivided = windowSize.width / ratio.width;
+    let heightDivided = windowSize.height / ratio.height;
+    return widthDivided >= heightDivided ? windowSize.height : widthDivided * ratio.height
+}
 
-interface CamelliaVisualzerProps {
+interface Props {
     defaultColor: FillStrokeColor;
     curveSpectrum?: Partial<FillStrokeColor>;
     barSpectrum?: Partial<Omit<FillStrokeColor, "fill">>;
@@ -28,35 +36,35 @@ interface CamelliaVisualzerProps {
     framerate: number;
 }
 
-
-function getContentHeight(windowSize: WidthHeight, ratio: WidthHeight) {
-    let widthDivided = windowSize.width / ratio.width;
-    let heightDivided = windowSize.height / ratio.height;
-    return widthDivided >= heightDivided ? windowSize.height : widthDivided * ratio.height
-}
-
-
-const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
+const CamelliaVisualizer : React.FC<Props> = (props) => {
 
     const [ windowSize, setWindowSize ] = useState<WidthHeight>({ width: window.innerWidth, height: window.innerHeight });
     const [ contentHeight, setContentHeight ] = useState<number>(
-        getContentHeight(windowSize, { width: 3, height: 2 })
+        getContentHeight(windowSize, WINDOW_RATIO)
     );
     
-    const [ showInputs, setShowInputs ] = useState<boolean>(true);
-    const [ processingText, setProcessingText ] = useState<string>("");
-    const [ currentFrame, setCurrentFrame ] = useState<number>(-1);
-    const [ arrayOnDisplay, setArrayOnDisplay ] = useState<Float32Array>(emptyArrayOnDisplay);
+    const [ waveArrayOnDisplay, setWaveArrayOnDisplay ] = useState<Float32Array>(emptyArrayOnDisplay);
+    const [ spectrumArrayOnDisplay, setSpectrumArrayOnDisplay ] = useState<Float32Array>(emptyArrayOnDisplay);
     const [ volumeOnDisplay, setVolumeOnDisplay ] = useState<number>(0);
-    const [ imageSrc, setImageSrc ] = useState<string>();
+    const [ fps, setFps ] = useState<number>(0);
+
+    const [ processingText, setProcessingText ] = useState<string>("");
+    const [ showInputs, setShowInputs ] = useState<boolean>(true);
+    const [ font, setFont ] = useState<string>();
+    const [ audioMetadata, _setAudioMetadata ] = useState<AudioFileMetaData>({});
 
 
+    const currentPlayTimeRef = useRef<number>(-1);
     const playerRef = useRef<AudioPlayer>();
-    const calculatorRef = useRef<FourierCalculator.AbstractFourierCalculator>();
+    const calculatorRef = useRef<FourierCalculator>();
     const readingStateRef = useRef<boolean>(false);
-    const loopIdRef = useRef<number>();
+    const timeoutRef = useRef<NodeJS.Timeout>();
 
     const inputFileRef = useRef<HTMLInputElement>(null);
+    const fontInputRef = useRef<HTMLInputElement>(null);
+    const artistNameInputRef = useRef<HTMLInputElement>(null);
+    const musicTitleInputRef = useRef<HTMLInputElement>(null);
+    const albumNameInputRef = useRef<HTMLInputElement>(null);
     const repeatCheckboxRef = useRef<HTMLInputElement>(null);
     const imageSrcInputRef = useRef<HTMLInputElement>(null);
     const volumeSliderRef = useRef<HTMLInputElement>(null);
@@ -94,35 +102,59 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
     const updateSpectrum = useCallback(() => {
         if(!calculatorRef.current?.isAudioBufferSet()) return;
 
-        let _currentFrame = currentFrame;
-        let frame = Math.floor((playerRef.current?.getTime() ?? 0) * props.framerate);
+        // Update current frame based on the current time
+        let timeMs = (playerRef.current?.getTime() ?? 0) * 1000;
         
-        // Change smoothly if not "frame jump"
-        if(_currentFrame < frame) {
-            _currentFrame = frame - _currentFrame > 5 ? frame : _currentFrame + 1;
-        }
-        else if(_currentFrame > frame) {
-            _currentFrame = frame;
-        }
+        // Skip if the frame is the
+        if(timeMs === currentPlayTimeRef.current) return;
+        currentPlayTimeRef.current = timeMs;
 
-        if(_currentFrame === currentFrame) return;
-        setCurrentFrame(_currentFrame);
-
-        let frameData = calculatorRef.current.getFrameData(_currentFrame);
+        let rawData = calculatorRef.current.getRawData(timeMs);
+        let frameData = calculatorRef.current.calculateData(rawData);
         if(!frameData) return;
 
         let { transformArray, volume } = frameData;
-        setArrayOnDisplay(transformArray);
+        setWaveArrayOnDisplay(rawData);
+        setSpectrumArrayOnDisplay(transformArray);
         setVolumeOnDisplay(volume);
-    }, [ props, currentFrame ]);
+    }, []);
     
 
+    const lastFrameMsRef = useRef<number>(0);
+    const fpsFrameCountRef = useRef<number>(0);
     const loop = useCallback(() => {
         updateProcessString();
         updateSpectrum();
 
-        loopIdRef.current = requestAnimationFrame(loop);
+        const nowMs = window.performance.now();
+        if(Math.floor(nowMs / 1000) - Math.floor(lastFrameMsRef.current / 1000)) {
+            setFps(fpsFrameCountRef.current);
+            fpsFrameCountRef.current = 0;
+        }
+        fpsFrameCountRef.current++;
+        lastFrameMsRef.current = nowMs;
+
+        timeoutRef.current = setTimeout(loop, 0);
     }, [ updateProcessString, updateSpectrum ])
+
+
+    const setAudioMetadata = useCallback((metadata: AudioFileMetaData) => {
+        _setAudioMetadata(metadata)
+        localStorage.setItem('camellia-visualizer.audio-metadata', JSON.stringify(metadata)) 
+
+        if(imageSrcInputRef.current) {
+            imageSrcInputRef.current.value = metadata.imageUri ?? ''
+        }
+        if(artistNameInputRef.current) {
+            artistNameInputRef.current.value = metadata.artist ?? '';
+        }
+        if(musicTitleInputRef.current) {
+            musicTitleInputRef.current.value = metadata.title ?? '';
+        }
+        if(albumNameInputRef.current) {
+            albumNameInputRef.current.value = metadata.album ?? '';
+        }
+    }, [])
 
 
     const onFileSelection = useCallback(async () => {
@@ -138,26 +170,32 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
             if(!inputFile) return;
 
             let decoded = await player.insertAudioFile(inputFile);
-            if(player.albumCoverUri) {
-                setImageSrc(player.albumCoverUri);
+            if(player.audioMetadata) {
+                let oldMetadataStr = localStorage.getItem('camellia-visualizer.audio-metadata') ?? '{}';
+                let oldMetadata = JSON.parse(oldMetadataStr) as AudioFileMetaData;
+
+                let audioMetadata = { oldMetadata, ...player.audioMetadata };
+                setAudioMetadata(audioMetadata);
             }
             calculator.setAudioBuffer(decoded);
             
-            setCurrentFrame(0);
-            setArrayOnDisplay(emptyArrayOnDisplay);
+            currentPlayTimeRef.current = 0;
+            setWaveArrayOnDisplay(emptyArrayOnDisplay);
+            setSpectrumArrayOnDisplay(emptyArrayOnDisplay);
             setVolumeOnDisplay(0);
         } catch(e) {
-            let imageInput = imageSrcInputRef.current;
-            if(imageInput) imageInput.value = `${e}`; // TODO: remove this debugging
             console.error(e);
         } finally {
             readingStateRef.current = false;
         }
-    }, []);
+    }, [ setAudioMetadata ]);
 
 
-    const onUrlUpdate : React.ChangeEventHandler<HTMLInputElement> = (event) => {
-        setImageSrc(event.target.value);
+    const onCoverUrlUpdate : React.ChangeEventHandler<HTMLInputElement> = (event) => {
+        let newAudioMetadata = audioMetadata;
+        newAudioMetadata.imageUri = event.target.value;
+        setAudioMetadata(newAudioMetadata);
+        localStorage.setItem('camellia-visualizer.audio-metadata', JSON.stringify(newAudioMetadata)) 
     }
 
 
@@ -177,7 +215,7 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
     }
 
 
-    const triggerStartStop : AlbumCoverClickHandler = useCallback(() => {
+    const toggleStartStop : AlbumCoverClickHandler = useCallback(() => {
         if(!playerRef.current) return;
         playerRef.current.isPlaying() ? stop() : start();
     }, [ start, stop ]);
@@ -191,7 +229,7 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
     const handleResize = useCallback(() => {
         let widthHeight = { width: window.innerWidth, height: window.innerHeight };
 
-        setContentHeight(getContentHeight(widthHeight, { width: 3, height: 2 }));
+        setContentHeight(getContentHeight(widthHeight, WINDOW_RATIO));
         
         setWindowSize(widthHeight);
     }, []);
@@ -199,25 +237,23 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
 
     const handleKeyPress = useCallback((event: KeyboardEvent) => {
         if(event.key === ' ') {
-            triggerStartStop();
+            toggleStartStop();
         }
         else if(event.key === 'h') {
             setShowInputs(s => !s);
         }
-    }, [ triggerStartStop ]);
+    }, [ toggleStartStop ]);
 
 
     const setupCalculator = useCallback((forced: boolean = false) => {
         if(forced || !calculatorRef.current) {
             // TODO: Set method type customizable
-            calculatorRef.current = FourierCalculator.fromMethod(/* 'buffer' */ 'real-time', {
-                // cacheBufferDuration: 5, 
-                framerate: props.framerate,
-                customSampleRate: 2048,
+            calculatorRef.current = new FourierCalculator({
+                sampleRatePerSecond: 2048,
                 transformZoom: 4
             });
         }
-    }, [ props ]);
+    }, []);
 
 
     const setupAudioPlayer = useCallback(() => {
@@ -229,6 +265,19 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
             }
         });
     }, [ start ]);
+
+
+    const manageInputs = useCallback(() => {
+        if(fontInputRef.current) {
+            let font = localStorage.getItem('camellia-visualizer.font') ?? '';
+            fontInputRef.current.value = font
+            setFont(font)
+        }
+
+        let metadataStr = localStorage.getItem('camellia-visualizer.audio-metadata') ?? '{}';
+        let metadata = JSON.parse(metadataStr) as AudioFileMetaData;
+        setAudioMetadata(metadata)
+    }, [ setAudioMetadata ]);
 
 
     const getPreviousVolume = useCallback(() => {
@@ -254,6 +303,7 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
         window.addEventListener('resize', handleResize);
         window.addEventListener('keypress', handleKeyPress);
 
+        manageInputs();
         setupCalculator();
         setupAudioPlayer();
         getPreviousVolume();
@@ -263,9 +313,9 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
             window.removeEventListener('resize', handleResize);
             window.removeEventListener('keypress', handleKeyPress);
 
-            if(loopIdRef.current) cancelAnimationFrame(loopIdRef.current);
+            if(timeoutRef.current) clearTimeout(timeoutRef.current);
         }
-    }, [ handleKeyPress, setupCalculator, setupAudioPlayer, loop, handleResize, getPreviousVolume ]);
+    }, [ manageInputs, handleKeyPress, setupCalculator, setupAudioPlayer, loop, handleResize, getPreviousVolume ]);
 
 
     useEffect(() => {
@@ -273,81 +323,141 @@ const CamelliaVisualizer : React.FC<CamelliaVisualzerProps> = (props) => {
     }, [ updateSpectrum ]);
 
 
+    const settingsBox = (
+        <div className={ `inputs${ showInputs ? '' : ' hidden' }` } >
+            <span>Click 'H' to hide me!</span>
+            <table>
+                <tbody>
+                    <tr>
+                        <td>Audio file</td>
+                        <td><input className='undraggable' type="file" accept="audio/*,video/*"
+                            ref={ inputFileRef } onInput={ onFileSelection }/>
+                        </td>
+                        <td>{ processingText }</td>
+                    </tr>
+                    <tr>
+                        <td>Volume</td>
+                        <td><input type="range"
+                            ref={ volumeSliderRef } onChange={ onVolumeSliderChange }
+                            min={ 0 } max={ 1 } step={ 0.001 }/>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Repeat?</td>
+                        <td><input id="repeat_checkbox" type="checkbox"
+                            ref={ repeatCheckboxRef }/>
+                        </td>
+                    </tr>
+                    <tr><td>&nbsp;</td></tr>
+                    <tr>
+                        <td>Image URL</td>
+                        <td><input className='undraggable' type="text" placeholder="Image url..."
+                            ref={ imageSrcInputRef } onChange={ onCoverUrlUpdate }/>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Font</td>
+                        <td><input className='undraggable' type='text' placeholder="monospace"
+                            ref={ fontInputRef } onChange={ event => {
+                                setFont(event.target.value);
+                                localStorage.setItem('camellia-visualizer.font', event.target.value)
+                            }}/>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Artist Name</td>
+                        <td><input className='undraggable' type='text'
+                            ref={ artistNameInputRef } onChange={ event => {
+                                setAudioMetadata({ ...audioMetadata, artist: event.target.value });
+                                localStorage.setItem('camellia-visualizer.artist-name', event.target.value)
+                            }}/>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Music Title</td>
+                        <td><input className='undraggable' type='text'
+                            ref={ musicTitleInputRef } onChange={ event => {
+                                setAudioMetadata({ ...audioMetadata, title: event.target.value });
+                                localStorage.setItem('camellia-visualizer.music-name', event.target.value)
+                            }}/>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Album Name</td>
+                        <td><input className='undraggable' type='text'
+                            ref={ albumNameInputRef } onChange={ event => {
+                                setAudioMetadata({ ...audioMetadata, album: event.target.value });
+                                localStorage.setItem('camellia-visualizer.album-name', event.target.value)
+                            }}/>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <div>
+                <input
+                    type="button" 
+                    value="START/PAUSE"
+                    onClick={ () => toggleStartStop() }
+                />
+                <input
+                    type="button" 
+                    value="STOP"
+                    onClick={ () => stop(true) }
+                />
+                <span style={{ marginLeft: '5px' }}>
+                    { fps } FPS
+                </span>
+            </div>
+        </div>
+    )
+
     return (<>
         <div className="camellia-visualzer">
             <Background
-                src={ imageSrc }
+                src={ audioMetadata?.imageUri }
                 magnify={ Math.min(1 + 0.001 * volumeOnDisplay, 10) + 0.05 }
             />
+            <MusicInfoBox
+                centerX={ windowSize.width / 2 + getRelative(310) }
+                centerY={ windowSize.height / 2 - getRelative(40) }
+                width={ getRelative(950) }
+                height={ getRelative(200) }
+                audioMetadata={ audioMetadata }
+                font={ font }
+                fontSize={ getRelative(28) }
+            />
             <AlbumCover
-                right={ windowSize.width / 2 + getRelative(86) }
-                bottom={ windowSize.height / 2 - getRelative(197) }
-                width={ getRelative(648) }
-                height={ getRelative(648) }
-                src={ imageSrc }
-                onClick={ calculatorRef.current?.isAudioBufferSet() ? triggerStartStop : undefined }
+                centerX={ windowSize.width / 2 - getRelative(524) }
+                centerY={ windowSize.height / 2 - getRelative(70) }
+                width={ getRelative(540) }
+                height={ getRelative(540) }
+                src={ audioMetadata?.imageUri }
+                onClick={ calculatorRef.current?.isAudioBufferSet() ? toggleStartStop : undefined }
             />
             <AudioSpectrum 
-                arrayOnDisplay={ arrayOnDisplay }
+                arrayOnDisplay={ spectrumArrayOnDisplay }
                 curveColor={ mergeColor(props.curveSpectrum, props.defaultColor) }
                 barColor={ mergeColor(props.barSpectrum, props.defaultColor) }
-                ballCount={ 12 }
+                ballCount={ 20 }
                 ballRadius={ getRelative(4) }
-                left={ windowSize.width / 2 - getRelative(44) }
-                width={ getRelative(777) }
-                bottom={ windowSize.height / 2 + getRelative(175) }
-                range={[ 0.0016 / 2, 0.017 / 2 ]}
-                waveScale={ getRelative(2.5) }
+                centerX={ windowSize.width / 2 }
+                width={ getRelative(1700) }
+                bottom={ windowSize.height - getRelative(150) }
+                range={[ 0.0004 / 2, 0.022 / 2 ]}
+                waveScale={ getRelative(3.5) }
             />
             <ProgressBar
                 color={ mergeColor(props.progressBar, props.defaultColor) }
-                left={ windowSize.width / 2 - getRelative(40) }
-                width={ getRelative(776) }
-                y={ windowSize.height / 2 + getRelative(194) }
+                centerX={ windowSize.width / 2 }
+                width={ getRelative(1700) }
+                y={ windowSize.height - getRelative(124) }
                 current={ playerRef.current?.isAudioInserted() ? (playerRef.current?.getTime() ?? 0) : 0 }
                 total={ playerRef.current?.isAudioInserted() ? (playerRef.current?.getDuration() ?? 1) : 1 }
                 ballRadius={ getRelative(8) }
                 onMouseUpdate={ onProgressBarUpdate }
             />
-            <input
-                className={ `undraggable ${ showInputs ? '' : 'hidden'}` }
-                id="audio_input" 
-                ref={ inputFileRef } 
-                type="file" accept="audio/*" 
-                onInput={ onFileSelection }
-            />
-            { processingText }
-            <input
-                className={ showInputs ? '' : 'hidden' }
-                id="repeat_checkbox"
-                type="checkbox"
-                ref={ repeatCheckboxRef }
-            />
-            <input
-                className={ showInputs ? '' : 'hidden' }
-                id="start_button"
-                type="button" 
-                value="STOP"
-                onClick={ () => stop(true) }
-            />
-            <input
-                className={ `undraggable ${ showInputs ? '' : 'hidden'}` }
-                ref={ imageSrcInputRef }
-                id="image_input"
-                type="text"
-                onChange={ onUrlUpdate }
-                placeholder="Image url..."
-            />
-            <br/>
-            <input
-                className={ showInputs ? '' : 'hidden' }
-                type="range"
-                ref={ volumeSliderRef }
-                onChange={ onVolumeSliderChange }
-                min={ 0 }
-                max={ 1 }
-                step={ 0.001 }
-            />
+            { settingsBox }
         </div>
     </>);
 }
