@@ -13,7 +13,8 @@ import './index.css'
 import MusicInfoBox from '../music-info-box';
 
 
-const emptyArrayOnDisplay = new Float32Array([0, 0]);
+const emptySpectrumArrayOnDisplay = new Float32Array([0, 0]);
+const emptyWaveArrayOnDisplay = new Float32Array([2, 2]);
 
 
 interface WidthHeight {
@@ -42,8 +43,8 @@ const CamelliaVisualizer : React.FC<Props> = (props) => {
         getContentHeight(windowSize, WINDOW_RATIO)
     );
     
-    const [ waveArrayOnDisplay, setWaveArrayOnDisplay ] = useState<Float32Array>(emptyArrayOnDisplay);
-    const [ spectrumArrayOnDisplay, setSpectrumArrayOnDisplay ] = useState<Float32Array>(emptyArrayOnDisplay);
+    const [ waveArrayOnDisplay, setWaveArrayOnDisplay ] = useState<Float32Array>(emptyWaveArrayOnDisplay);
+    const [ spectrumArrayOnDisplay, setSpectrumArrayOnDisplay ] = useState<Float32Array>(emptySpectrumArrayOnDisplay);
     const [ volumeOnDisplay, setVolumeOnDisplay ] = useState<number>(0);
     const [ fps, setFps ] = useState<number>(0);
 
@@ -179,8 +180,8 @@ const CamelliaVisualizer : React.FC<Props> = (props) => {
             calculator.setAudioBuffer(decoded);
             
             currentPlayTimeRef.current = 0;
-            setWaveArrayOnDisplay(emptyArrayOnDisplay.map(i => i+2));
-            setSpectrumArrayOnDisplay(emptyArrayOnDisplay);
+            setWaveArrayOnDisplay(emptyWaveArrayOnDisplay);
+            setSpectrumArrayOnDisplay(emptySpectrumArrayOnDisplay);
             setVolumeOnDisplay(0);
         } catch(e) {
             console.error(e);
