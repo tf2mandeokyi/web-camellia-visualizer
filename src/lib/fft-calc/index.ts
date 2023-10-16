@@ -43,20 +43,20 @@ export class FourierCalculator {
     }
 
 
-    getRawData(timeMs: number) : Float32Array {
+    getRawData(timeMs: number) : Float32Array[] {
         if(!this.isAudioBufferSet())
             throw new Error('Tried to get frame data while no audio buffer is set');
         
-        let splitChannels = this.getSplitChannelData(timeMs);
-        return combineWindowedChannels(splitChannels, blackmanHarris4);
+        return this.getSplitChannelData(timeMs);
     }
 
 
-    calculateData(rawData: Float32Array) : FrameData {
+    calculateData(rawData: Float32Array[]) : FrameData {
         if(!this.fourierObject)
             throw new Error('Tried to get frame data while no audio buffer is set');
 
-        let transformArray = this.fourierObject.realTransform(rawData, 'radix-4');
+        let windowed = combineWindowedChannels(rawData, blackmanHarris4);
+        let transformArray = this.fourierObject.realTransform(windowed, 'radix-4');
         return { transformArray, volume: Math.max(...transformArray) };
     }
 

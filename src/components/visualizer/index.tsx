@@ -11,7 +11,6 @@ import AudioSpectrum from '../spectrum';
 
 import './index.css'
 import MusicInfoBox from '../music-info-box';
-import BarGraph from '../spectrum/BarGraph';
 
 
 const emptyArrayOnDisplay = new Float32Array([0, 0]);
@@ -114,7 +113,7 @@ const CamelliaVisualizer : React.FC<Props> = (props) => {
         if(!frameData) return;
 
         let { transformArray, volume } = frameData;
-        setWaveArrayOnDisplay(rawData);
+        setWaveArrayOnDisplay(rawData[0].map(i => i+2));
         setSpectrumArrayOnDisplay(transformArray);
         setVolumeOnDisplay(volume);
     }, []);
@@ -180,7 +179,7 @@ const CamelliaVisualizer : React.FC<Props> = (props) => {
             calculator.setAudioBuffer(decoded);
             
             currentPlayTimeRef.current = 0;
-            setWaveArrayOnDisplay(emptyArrayOnDisplay);
+            setWaveArrayOnDisplay(emptyArrayOnDisplay.map(i => i+2));
             setSpectrumArrayOnDisplay(emptyArrayOnDisplay);
             setVolumeOnDisplay(0);
         } catch(e) {
@@ -247,7 +246,6 @@ const CamelliaVisualizer : React.FC<Props> = (props) => {
 
     const setupCalculator = useCallback((forced: boolean = false) => {
         if(forced || !calculatorRef.current) {
-            // TODO: Set method type customizable
             calculatorRef.current = new FourierCalculator({
                 sampleRatePerSecond: 2048,
                 transformZoom: 4
@@ -416,12 +414,12 @@ const CamelliaVisualizer : React.FC<Props> = (props) => {
         <div className="camellia-visualzer">
             <Background
                 src={ audioMetadata?.imageUri }
-                magnify={ Math.min(1 + 0.001 * volumeOnDisplay, 10) + 0.05 }
+                magnify={ Math.min(1 + 0.0005 * volumeOnDisplay, 10) + 0.05 }
             />
             <MusicInfoBox
-                centerX={ windowSize.width / 2 + getRelative(310) }
-                centerY={ windowSize.height / 2 - getRelative(40) }
-                width={ getRelative(950) }
+                centerX={ windowSize.width / 2 + getRelative(330) }
+                centerY={ windowSize.height / 2 + getRelative(280) }
+                width={ getRelative(1000) }
                 height={ getRelative(200) }
                 audioMetadata={ audioMetadata }
                 font={ font }
@@ -429,7 +427,7 @@ const CamelliaVisualizer : React.FC<Props> = (props) => {
             />
             <AlbumCover
                 centerX={ windowSize.width / 2 - getRelative(524) }
-                centerY={ windowSize.height / 2 - getRelative(70) }
+                centerY={ windowSize.height / 2 - getRelative(30) }
                 width={ getRelative(540) }
                 height={ getRelative(540) }
                 src={ audioMetadata?.imageUri }
@@ -439,19 +437,38 @@ const CamelliaVisualizer : React.FC<Props> = (props) => {
                 arrayOnDisplay={ spectrumArrayOnDisplay }
                 curveColor={ mergeColor(props.curveSpectrum, props.defaultColor) }
                 barColor={ mergeColor(props.barSpectrum, props.defaultColor) }
-                ballCount={ 20 }
+                ballCount={ 15 }
                 ballRadius={ getRelative(4) }
-                centerX={ windowSize.width / 2 }
-                width={ getRelative(1700) }
-                bottom={ windowSize.height - getRelative(150) }
-                range={[ 0.0004 / 2, 0.022 / 2 ]}
-                waveScale={ getRelative(3.5) }
+                centerX={ windowSize.width / 2 + getRelative(330) }
+                width={ getRelative(950) }
+                bottom={ windowSize.height - getRelative(400) }
+                range={[ 0.0004 / 2, 0.017 / 2 ]}
+                waveScale={ getRelative(2) }
+            />
+            <AudioSpectrum 
+                arrayOnDisplay={ waveArrayOnDisplay }
+                curveColor={ {
+                    fill: 'transparent',
+                    lineWidth: 0,
+                    stroke: 'transparent'
+                } }
+                barColor={ {
+                    lineWidth: 2,
+                    stroke: 'white'
+                } }
+                ballCount={ waveArrayOnDisplay.length }
+                ballRadius={ getRelative(0) }
+                centerX={ windowSize.width / 2 - getRelative(524) }
+                width={ getRelative(540) }
+                bottom={ windowSize.height / 2 + getRelative(320) }
+                range={[ 0, 20 / 19 ]}
+                waveScale={ getRelative(20) }
             />
             <ProgressBar
                 color={ mergeColor(props.progressBar, props.defaultColor) }
-                centerX={ windowSize.width / 2 }
-                width={ getRelative(1700) }
-                y={ windowSize.height - getRelative(124) }
+                centerX={ windowSize.width / 2 + getRelative(330) }
+                width={ getRelative(1000) }
+                y={ windowSize.height - getRelative(144) }
                 current={ playerRef.current?.isAudioInserted() ? (playerRef.current?.getTime() ?? 0) : 0 }
                 total={ playerRef.current?.isAudioInserted() ? (playerRef.current?.getDuration() ?? 1) : 1 }
                 ballRadius={ getRelative(8) }
