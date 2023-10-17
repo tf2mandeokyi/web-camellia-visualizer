@@ -442,7 +442,7 @@ const CamelliaVisualizer : React.FC<Props> = (props) => {
                 ballRadius={ getRelative(4) }
                 centerX={ windowSize.width / 2 + getRelative(330) }
                 width={ getRelative(1000) }
-                bottom={ windowSize.height - getRelative(390) }
+                bottom={ windowSize.height / 2 + getRelative(150) }
                 range={[ 0.0004 / 2, 0.017 / 2 ]}
                 waveScale={ getRelative(2.8) }
             />
@@ -469,7 +469,7 @@ const CamelliaVisualizer : React.FC<Props> = (props) => {
                 color={ mergeColor(props.progressBar, props.defaultColor) }
                 centerX={ windowSize.width / 2 + getRelative(330) }
                 width={ getRelative(1000) }
-                y={ windowSize.height - getRelative(139) }
+                y={ windowSize.height / 2 + getRelative(401) }
                 current={ playerRef.current?.isAudioInserted() ? (playerRef.current?.getTime() ?? 0) : 0 }
                 total={ playerRef.current?.isAudioInserted() ? (playerRef.current?.getDuration() ?? 1) : 1 }
                 ballRadius={ getRelative(8) }
