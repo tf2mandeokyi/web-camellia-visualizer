@@ -193,7 +193,7 @@ const CamelliaVisualizer : React.FC<Props> = (props) => {
         } finally {
             readingStateRef.current = false;
         }
-    }, [ saveAudioMetadata ]);
+    }, [ saveAudioMetadata, getMetadataFromStorage ]);
 
 
     const onCoverUrlUpdate : React.ChangeEventHandler<HTMLInputElement> = (event) => {
@@ -286,7 +286,7 @@ const CamelliaVisualizer : React.FC<Props> = (props) => {
 
         let metadata = getMetadataFromStorage();
         saveAudioMetadata(metadata)
-    }, [ saveAudioMetadata ]);
+    }, [ saveAudioMetadata, getMetadataFromStorage ]);
 
 
     const getPreviousVolume = useCallback(() => {
