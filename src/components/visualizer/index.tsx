@@ -47,6 +47,7 @@ const CamelliaVisualizer : React.FC<Props> = (props) => {
     const [ spectrumArrayOnDisplay, setSpectrumArrayOnDisplay ] = useState<Float32Array>(emptySpectrumArrayOnDisplay);
     const [ volumeOnDisplay, setVolumeOnDisplay ] = useState<number>(0);
     const [ fps, setFps ] = useState<number>(0);
+    const [ frameLimit, setFrameLimit ] = useState<number>(60);
 
     const [ processingText, setProcessingText ] = useState<string>("");
     const [ showInputs, setShowInputs ] = useState<boolean>(true);
@@ -92,9 +93,9 @@ const CamelliaVisualizer : React.FC<Props> = (props) => {
 
     const updateProcessString = useCallback(() => {
         if(readingStateRef.current) {
-            setProcessingText(`Reading...`);
+            setProcessingText('Reading...');
         } else {
-            setProcessingText("");
+            setProcessingText('');
         }
     }, []);
 
@@ -123,6 +124,8 @@ const CamelliaVisualizer : React.FC<Props> = (props) => {
     const lastFrameMsRef = useRef<number>(0);
     const fpsFrameCountRef = useRef<number>(0);
     const loop = useCallback(() => {
+        timeoutRef.current = setTimeout(loop, 1000 / frameLimit);
+
         updateProcessString();
         updateSpectrum();
 
@@ -133,9 +136,7 @@ const CamelliaVisualizer : React.FC<Props> = (props) => {
         }
         fpsFrameCountRef.current++;
         lastFrameMsRef.current = nowMs;
-
-        timeoutRef.current = setTimeout(loop, 0);
-    }, [ updateProcessString, updateSpectrum ])
+    }, [ updateProcessString, updateSpectrum, frameLimit ])
 
 
     const getMetadataFromStorage = useCallback(() => {
@@ -357,7 +358,9 @@ const CamelliaVisualizer : React.FC<Props> = (props) => {
                             ref={ repeatCheckboxRef }/>
                         </td>
                     </tr>
+
                     <tr><td>&nbsp;</td></tr>
+
                     <tr>
                         <td>Image URL</td>
                         <td><input className='undraggable' type="text" placeholder="Image url..."
@@ -394,6 +397,19 @@ const CamelliaVisualizer : React.FC<Props> = (props) => {
                         <td><input className='undraggable' type='text'
                             ref={ albumNameInputRef } onChange={ event => {
                                 saveAudioMetadata({ ...audioMetadata, album: event.target.value });
+                            }}/>
+                        </td>
+                    </tr>
+                    
+                    <tr><td>&nbsp;</td></tr>
+
+                    <tr>
+                        <td>FPS limit</td>
+                        <td><input className='undraggable' type='number' min={ 10 } max={ 999 } value={ frameLimit }
+                            onChange={ event => {
+                                let value = Math.max(Math.min(parseInt(event.target.value), 999), 10);
+                                event.target.value = `${value}`;
+                                setFrameLimit(value)
                             }}/>
                         </td>
                     </tr>
