@@ -226,6 +226,11 @@ const CamelliaVisualizer : React.FC<Props> = (props) => {
     }
 
 
+    const makeLineWidthRelative = (color: FillStrokeColor) => {
+        return { ...color, lineWidth: getRelative(color.lineWidth) };
+    }
+
+
     const handleResize = useCallback(() => {
         let widthHeight = { width: window.innerWidth, height: window.innerHeight };
 
@@ -416,6 +421,8 @@ const CamelliaVisualizer : React.FC<Props> = (props) => {
             <Background
                 src={ audioMetadata?.imageUri }
                 magnify={ Math.min(1 + 0.0005 * volumeOnDisplay, 10) + 0.05 }
+                stripWidth={ getRelative(9.67) }
+                blur={ getRelative(7) }
             />
             <MusicInfoBox
                 centerX={ windowSize.width / 2 + getRelative(330) }
@@ -436,8 +443,8 @@ const CamelliaVisualizer : React.FC<Props> = (props) => {
             />
             <AudioSpectrum 
                 arrayOnDisplay={ spectrumArrayOnDisplay }
-                curveColor={ mergeColor(props.curveSpectrum, props.defaultColor) }
-                barColor={ mergeColor(props.barSpectrum, props.defaultColor) }
+                curveColor={ makeLineWidthRelative(mergeColor(props.defaultColor, props.curveSpectrum)) }
+                barColor={ makeLineWidthRelative(mergeColor(props.defaultColor, props.barSpectrum)) }
                 ballCount={ 15 }
                 ballRadius={ getRelative(4) }
                 centerX={ windowSize.width / 2 + getRelative(330) }
@@ -454,7 +461,7 @@ const CamelliaVisualizer : React.FC<Props> = (props) => {
                     stroke: 'transparent'
                 } }
                 barColor={ {
-                    lineWidth: 2,
+                    lineWidth: getRelative(2),
                     stroke: 'white'
                 } }
                 ballCount={ waveArrayOnDisplay.length }
@@ -466,13 +473,14 @@ const CamelliaVisualizer : React.FC<Props> = (props) => {
                 waveScale={ getRelative(20) }
             />
             <ProgressBar
-                color={ mergeColor(props.progressBar, props.defaultColor) }
+                color={ makeLineWidthRelative(mergeColor(props.defaultColor, props.progressBar, { lineWidth: getRelative(2) })) }
                 centerX={ windowSize.width / 2 + getRelative(330) }
                 width={ getRelative(1000) }
                 y={ windowSize.height / 2 + getRelative(401) }
                 current={ playerRef.current?.isAudioInserted() ? (playerRef.current?.getTime() ?? 0) : 0 }
                 total={ playerRef.current?.isAudioInserted() ? (playerRef.current?.getDuration() ?? 1) : 1 }
                 ballRadius={ getRelative(8) }
+                strokeWidth={ getRelative(2) }
                 onMouseUpdate={ onProgressBarUpdate }
             />
             { settingsBox }

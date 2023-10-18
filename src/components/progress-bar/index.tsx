@@ -15,6 +15,7 @@ interface ProgressBarProps {
     current: number;
     total: number;
     ballRadius: number;
+    strokeWidth: number;
     onMouseUpdate?: ProgressBarClickHandler;
 }
 
@@ -63,10 +64,10 @@ const ProgressBar : React.FC<ProgressBarProps> = (props) => {
         ctx.lineWidth = color.lineWidth;
 
         ctx.beginPath();
-        ctx.moveTo(ballRadius, ballRadius-1);
-        ctx.lineTo(canvas.width - ballRadius, ballRadius-1);
-        ctx.lineTo(canvas.width - ballRadius, ballRadius+1);
-        ctx.lineTo(ballRadius, ballRadius+1);
+        ctx.moveTo(ballRadius, ballRadius - props.strokeWidth / 2);
+        ctx.lineTo(canvas.width - ballRadius, ballRadius - props.strokeWidth / 2);
+        ctx.lineTo(canvas.width - ballRadius, ballRadius + props.strokeWidth / 2);
+        ctx.lineTo(ballRadius, ballRadius + props.strokeWidth / 2);
         ctx.closePath();
         ctx.fill();
 
