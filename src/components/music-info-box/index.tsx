@@ -51,7 +51,7 @@ const MusicInfoBox = (props: Props) => {
 
 
     let artist = props.audioMetadata?.artist ?? '';
-    let artistLetterSpacing = calculateSpacing(titleRef, artist, props.width * 0.4)
+    let artistLetterSpacing = calculateSpacing(titleRef, artist, props.width * 0.5)
 
     let title = props.audioMetadata?.title ?? '';
     if(title === '') title = 'Untitled'
