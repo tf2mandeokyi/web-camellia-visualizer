@@ -175,8 +175,9 @@ export class AudioPlayer {
 
                     let imageUri: string | undefined = undefined;
                     if(picture) {
-                        let base64String = picture.data.map((c) => String.fromCharCode(c)).reduce((prev, cur) => prev + cur);
-                        imageUri = "data:" + picture.format + ";base64," + window.btoa(base64String);
+                        let data = new Uint8Array(picture.data);
+                        let blob = new Blob([ data ], { type: picture.format });
+                        imageUri = URL.createObjectURL(blob);
                     }
     
                     let result: any = { title, artist, album, imageUri };

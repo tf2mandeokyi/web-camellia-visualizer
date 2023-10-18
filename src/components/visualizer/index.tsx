@@ -138,7 +138,13 @@ const CamelliaVisualizer : React.FC<Props> = (props) => {
     }, [ updateProcessString, updateSpectrum ])
 
 
-    const setAudioMetadata = useCallback((metadata: AudioFileMetaData) => {
+    const getMetadataFromStorage = useCallback(() => {
+        let json = localStorage.getItem('camellia-visualizer.audio-metadata') ?? '{}'
+        return JSON.parse(json) as AudioFileMetaData;
+    }, []);
+
+
+    const saveAudioMetadata = useCallback((metadata: AudioFileMetaData) => {
         _setAudioMetadata(metadata)
         localStorage.setItem('camellia-visualizer.audio-metadata', JSON.stringify(metadata)) 
 
@@ -170,32 +176,30 @@ const CamelliaVisualizer : React.FC<Props> = (props) => {
             if(!inputFile) return;
 
             let decoded = await player.insertAudioFile(inputFile);
-            if(player.audioMetadata) {
-                let oldMetadataStr = localStorage.getItem('camellia-visualizer.audio-metadata') ?? '{}';
-                let oldMetadata = JSON.parse(oldMetadataStr) as AudioFileMetaData;
-
-                let audioMetadata = { oldMetadata, ...player.audioMetadata };
-                setAudioMetadata(audioMetadata);
-            }
             calculator.setAudioBuffer(decoded);
-            
+
             currentPlayTimeRef.current = 0;
             setWaveArrayOnDisplay(emptyWaveArrayOnDisplay);
             setSpectrumArrayOnDisplay(emptySpectrumArrayOnDisplay);
             setVolumeOnDisplay(0);
+
+            if(player.audioMetadata) {
+                let oldMetadata = getMetadataFromStorage();
+                let audioMetadata = { ...oldMetadata, ...player.audioMetadata };
+                saveAudioMetadata(audioMetadata);
+            }
         } catch(e) {
             console.error(e);
         } finally {
             readingStateRef.current = false;
         }
-    }, [ setAudioMetadata ]);
+    }, [ saveAudioMetadata ]);
 
 
     const onCoverUrlUpdate : React.ChangeEventHandler<HTMLInputElement> = (event) => {
         let newAudioMetadata = audioMetadata;
         newAudioMetadata.imageUri = event.target.value;
-        setAudioMetadata(newAudioMetadata);
-        localStorage.setItem('camellia-visualizer.audio-metadata', JSON.stringify(newAudioMetadata)) 
+        saveAudioMetadata(newAudioMetadata);
     }
 
 
@@ -242,7 +246,7 @@ const CamelliaVisualizer : React.FC<Props> = (props) => {
 
     const handleKeyPress = useCallback((event: KeyboardEvent) => {
         if(document.activeElement instanceof HTMLInputElement) return;
-        
+
         if(event.key === ' ') {
             toggleStartStop();
         }
@@ -280,10 +284,9 @@ const CamelliaVisualizer : React.FC<Props> = (props) => {
             setFont(font)
         }
 
-        let metadataStr = localStorage.getItem('camellia-visualizer.audio-metadata') ?? '{}';
-        let metadata = JSON.parse(metadataStr) as AudioFileMetaData;
-        setAudioMetadata(metadata)
-    }, [ setAudioMetadata ]);
+        let metadata = getMetadataFromStorage();
+        saveAudioMetadata(metadata)
+    }, [ saveAudioMetadata ]);
 
 
     const getPreviousVolume = useCallback(() => {
@@ -374,8 +377,7 @@ const CamelliaVisualizer : React.FC<Props> = (props) => {
                         <td>Artist Name</td>
                         <td><input className='undraggable' type='text'
                             ref={ artistNameInputRef } onChange={ event => {
-                                setAudioMetadata({ ...audioMetadata, artist: event.target.value });
-                                localStorage.setItem('camellia-visualizer.artist-name', event.target.value)
+                                saveAudioMetadata({ ...audioMetadata, artist: event.target.value });
                             }}/>
                         </td>
                     </tr>
@@ -383,8 +385,7 @@ const CamelliaVisualizer : React.FC<Props> = (props) => {
                         <td>Music Title</td>
                         <td><input className='undraggable' type='text'
                             ref={ musicTitleInputRef } onChange={ event => {
-                                setAudioMetadata({ ...audioMetadata, title: event.target.value });
-                                localStorage.setItem('camellia-visualizer.music-name', event.target.value)
+                                saveAudioMetadata({ ...audioMetadata, title: event.target.value });
                             }}/>
                         </td>
                     </tr>
@@ -392,8 +393,7 @@ const CamelliaVisualizer : React.FC<Props> = (props) => {
                         <td>Album Name</td>
                         <td><input className='undraggable' type='text'
                             ref={ albumNameInputRef } onChange={ event => {
-                                setAudioMetadata({ ...audioMetadata, album: event.target.value });
-                                localStorage.setItem('camellia-visualizer.album-name', event.target.value)
+                                saveAudioMetadata({ ...audioMetadata, album: event.target.value });
                             }}/>
                         </td>
                     </tr>
