@@ -18,14 +18,5 @@
 }
 
 .music-info-box .title {
-    font-size: 2.5em;
     font-weight: 600;
-}
-
-.music-info-box .artist {
-    font-size: 1em;
-}
-
-.music-info-box .album {
-    font-size: 1em;
 }

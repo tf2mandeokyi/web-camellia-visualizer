@@ -34,7 +34,7 @@ export class AudioPlayer {
     }
 
 
-    setDonePlayingHandler(handler: () => void) : AudioPlayer {
+    setDonePlayingHandler(handler: () => void) : this {
         this.onDonePlaying = handler;
         return this;
     }

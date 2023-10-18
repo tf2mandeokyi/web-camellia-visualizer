@@ -12,7 +12,7 @@ interface BackgroundProps {
 
 
 /**
- * @todo Needs some THREE.js shader programming here for the proper background blur effect
+ * TODO: Needs some THREE.js shader programming here for the proper background blur effect
  * @param props 
  * @returns 
  */

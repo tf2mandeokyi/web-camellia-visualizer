@@ -6,12 +6,6 @@ export interface FrameData {
 }
 
 
-type FCConstructorArgs = {
-    transformZoom?: number;
-    sampleRatePerSecond?: number;
-}
-
-
 export class FourierCalculator {
     
     private transformZoom: number;
@@ -23,7 +17,10 @@ export class FourierCalculator {
     private fourierObject?: FastRealFourierTransform;
 
 
-    constructor({ transformZoom = 1, sampleRatePerSecond }: FCConstructorArgs) {
+    constructor({ transformZoom = 1, sampleRatePerSecond }: {
+        transformZoom?: number;
+        sampleRatePerSecond?: number;
+    }) {
         this.transformZoom = transformZoom;
         this.sampleRatePerSecond = sampleRatePerSecond;
     }
