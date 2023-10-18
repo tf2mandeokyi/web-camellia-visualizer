@@ -8,9 +8,9 @@ import AlbumCover, { AlbumCoverClickHandler } from '../album-cover'
 import ProgressBar, { ProgressBarClickHandler } from '../progress-bar';
 import Background from '../background'
 import AudioSpectrum from '../spectrum';
+import MusicInfoBox from '../music-info-box';
 
 import './index.css'
-import MusicInfoBox from '../music-info-box';
 
 
 const emptySpectrumArrayOnDisplay = new Float32Array([0, 0]);
