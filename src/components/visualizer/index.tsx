@@ -241,6 +241,8 @@ const CamelliaVisualizer : React.FC<Props> = (props) => {
 
 
     const handleKeyPress = useCallback((event: KeyboardEvent) => {
+        if(document.activeElement instanceof HTMLInputElement) return;
+        
         if(event.key === ' ') {
             toggleStartStop();
         }
